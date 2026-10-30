@@ -79,7 +79,7 @@ export class DownloadsController {
     return item.id;
   }
 
-  update(id, percent, message, status = null) {
+  update(id, percent, message, status = null, localUrl = '') {
     const item = this.items.find(entry => entry.id === id);
     if (!item) return;
     item.percent = Math.max(0, Math.min(100, Number(percent) || 0));
@@ -87,6 +87,7 @@ export class DownloadsController {
     if (status) item.status = status;
     else if (item.percent >= 100) item.status = 'complete';
     if (item.status === 'complete' && !item.completedAt) item.completedAt = Date.now();
+    if (localUrl) item.localUrl = localUrl;
     this.save();
     this.render();
     this.renderHistory();
