@@ -283,7 +283,10 @@ export class ViewerController {
     const ext = post.fileType || 'jpg';
     const filename = `gelbooru_${post.id}.${ext}`;
     
-    const downloadId = this.app.downloads?.start(filename);
+    const downloadId = this.app.downloads?.start(filename, {
+      post,
+      thumb: post.preview_url || post.sample_url || ''
+    });
     try {
       const success = await downloadMedia(post.file_url, filename, (percent, msg, status) => {
         if (downloadId != null) this.app.downloads?.update(downloadId, percent, msg, status);

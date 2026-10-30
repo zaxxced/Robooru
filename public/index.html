@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="css/gallery.css" />
     <link rel="stylesheet" href="css/viewer.css" />
     <link rel="stylesheet" href="css/settings.css" />
+    <link rel="stylesheet" href="css/download-carousel.css" />
   </head>
   <body>
     <div id="app">
@@ -188,6 +189,12 @@
               <span style="font-weight:700; font-size:1rem;" data-i18n="hist_title">Downloaded files</span>
               <button id="btn-clear-download-history" class="btn btn-danger" style="height:34px; padding:0 12px; font-size:0.75rem;" >Clear completed</button>
             </div>
+
+            <!-- Recent downloads carousel: horizontal swipe, hidden when there are none -->
+            <section id="dl-carousel" class="dl-carousel" style="display:none;">
+              <div class="dl-carousel-title">Recent downloads</div>
+              <div id="dl-carousel-list" class="dl-carousel-list no-scrollbar"></div>
+            </section>
 
             <div id="downloads-history-list"></div>
 

@@ -3,6 +3,29 @@
  * Keeps the five most recent downloads and their live progress.
  */
 
+import { setImageSrc } from '../utils/capacitor.js';
+
+const CAROUSEL_MAX = 20;
+
+// Only the fields the viewer and the carousel need, to keep localStorage small
+const compactPost = (post) => ({
+  id: post.id,
+  file_url: post.file_url,
+  sample_url: post.sample_url,
+  preview_url: post.preview_url,
+  width: post.width,
+  height: post.height,
+  aspect_ratio: post.aspect_ratio,
+  score: post.score,
+  rating: post.rating,
+  tags: post.tags,
+  tagsArray: post.tagsArray,
+  source: post.source,
+  fileType: post.fileType,
+  isVideo: post.isVideo,
+  isGif: post.isGif
+});
+
 export class DownloadsController {
   constructor() {
     this.items = [];
@@ -36,14 +59,17 @@ export class DownloadsController {
     this.renderHistory();
   }
 
-  start(filename) {
+  start(filename, meta = {}) {
     const item = {
       id: this.nextId++,
       filename,
       percent: 0,
       message: 'Starting download…',
       status: 'active',
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      // Compact post data so the History carousel can show a preview and open the viewer
+      thumb: meta.thumb || '',
+      post: meta.post ? compactPost(meta.post) : null
     };
     this.items.unshift(item);
     this.items = this.items.slice(0, 100);
@@ -71,7 +97,69 @@ export class DownloadsController {
     try { localStorage.setItem('robooru-download-history', JSON.stringify(this.items.slice(0, 100))); } catch {}
   }
 
+  renderCarousel() {
+    const section = document.getElementById('dl-carousel');
+    const list = document.getElementById('dl-carousel-list');
+    if (!section || !list) return;
+
+    // One card per post (newest first), only for downloads that carry post data
+    const seen = new Set();
+    const entries = [];
+    for (const item of this.items) {
+      if (!item.post || seen.has(item.post.id)) continue;
+      seen.add(item.post.id);
+      entries.push(item);
+      if (entries.length >= CAROUSEL_MAX) break;
+    }
+
+    section.style.display = entries.length ? 'block' : 'none';
+
+    // Progress updates call this often: rebuild only when the set of posts changes, so previews don't flicker
+    const key = entries.map(e => e.post.id).join(',');
+    if (key === this.carouselKey && list.children.length === entries.length) return;
+    this.carouselKey = key;
+    list.innerHTML = '';
+
+    entries.forEach((item, idx) => {
+      // Rounded card: shimmer skeleton until the preview has loaded
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'dl-card skeleton';
+      card.setAttribute('aria-label', `Post ${item.post.id}`);
+
+      const img = document.createElement('img');
+      img.className = 'dl-card-img';
+      img.alt = '';
+      img.decoding = 'async';
+
+      const label = document.createElement('span');
+      label.className = 'dl-card-label';
+      label.textContent = `#${item.post.id}`;
+
+      card.append(img, label);
+      list.appendChild(card);
+
+      const candidates = [item.thumb, item.post.preview_url, item.post.sample_url].filter(Boolean);
+      setImageSrc(img, [...new Set(candidates)], {
+        onLoad: () => {
+          card.classList.remove('skeleton');
+          img.classList.add('loaded');
+        },
+        onFail: () => {
+          card.classList.remove('skeleton');
+          card.classList.add('failed');
+        }
+      });
+
+      card.addEventListener('click', () => {
+        const posts = entries.map(e => e.post);
+        window.app?.viewer?.open(posts, idx);
+      });
+    });
+  }
+
   renderHistory() {
+    this.renderCarousel();
     if (!this.historyList) return;
     if (!this.items.length) {
       this.historyList.innerHTML = '';
