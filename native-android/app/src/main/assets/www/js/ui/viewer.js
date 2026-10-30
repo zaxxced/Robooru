@@ -148,7 +148,7 @@ export class ViewerController {
     if (post.isVideo) {
       const video = document.createElement('video');
       video.className = 'viewer-video';
-      video.src = post.file_url;
+      video.src = post.local_file_url || post.file_url;
       video.autoplay = true;
       video.loop = true;
       video.playsInline = true;
@@ -161,9 +161,9 @@ export class ViewerController {
       const img = document.createElement('img');
       img.className = 'viewer-image';
       img.alt = post.tags;
-      const initialSrc = prefersOriginal ? post.file_url : (post.sample_url || post.file_url);
+      const initialSrc = post.local_file_url || (prefersOriginal ? post.file_url : (post.sample_url || post.file_url));
       img.dataset.full = initialSrc === post.file_url ? '1' : '0';
-      const candidates = [initialSrc, post.sample_url, post.file_url, post.preview_url]
+      const candidates = [post.local_file_url, initialSrc, post.sample_url, post.file_url, post.preview_url]
         .filter((u, i, a) => u && a.indexOf(u) === i);
       const hideSpinner = () => {
         if (this.spinnerEl) this.spinnerEl.style.display = 'none';
@@ -288,8 +288,8 @@ export class ViewerController {
       thumb: post.preview_url || post.sample_url || ''
     });
     try {
-      const success = await downloadMedia(post.file_url, filename, (percent, msg, status) => {
-        if (downloadId != null) this.app.downloads?.update(downloadId, percent, msg, status);
+      const success = await downloadMedia(post.file_url, filename, (percent, msg, status, localUrl) => {
+        if (downloadId != null) this.app.downloads?.update(downloadId, percent, msg, status, localUrl);
       });
       if (!success && downloadId != null) {
         this.app.downloads?.update(downloadId, 0, 'Download failed', 'failed');
