@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+
+# Capacitor & Android build artifacts
+android/app/build/
+android/.gradle/
+android/build/
+android/captures/
+android/local.properties
+android/app/release/
+android/**/*.apk
+android/**/*.aab
+android/.idea/
+android/*.iml
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment
+.env
+.env.production

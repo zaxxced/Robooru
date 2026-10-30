@@ -1,0 +1,6 @@
+{
+  "name": "BooruBrowser - Gelbooru Client",
+  "description": "Lightweight and smooth unofficial Gelbooru client for Android and Web, inspired by Mori with masonry gallery, search, collections, and fullscreen viewer.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

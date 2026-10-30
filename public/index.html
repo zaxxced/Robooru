@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en" data-theme="dark" data-accent="violet">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>BooruBrowser - Gelbooru Client</title>
+    <meta name="description" content="Lightweight and smooth unofficial Gelbooru client for Android and Web, inspired by Mori with masonry gallery, search, collections, and fullscreen viewer." />
+    <meta property="og:title" content="BooruBrowser - Gelbooru Client" />
+    <meta property="og:description" content="Lightweight and smooth unofficial Gelbooru client for Android and Web, inspired by Mori with masonry gallery, search, collections, and fullscreen viewer." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#12141a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Application Stylesheets -->
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/gallery.css" />
+    <link rel="stylesheet" href="css/viewer.css" />
+    <link rel="stylesheet" href="css/settings.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Top Application Header -->
+      <header class="app-header">
+        <div class="header-title">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent-primary);">
+            <rect x="3" y="3" width="18" height="18" rx="4" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+          <span data-i18n="app_title">BooruBrowser</span>
+        </div>
+        <div class="header-actions">
+          <!-- Active Search Query Pill (Hidden when on default feed) -->
+          <div id="browse-current-query" class="tag-chip cat-general" style="display:none; cursor:pointer;">
+            <span></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Navigation Views Container -->
+      <main class="views-container">
+        
+        <!-- View 1: Browse / Gallery -->
+        <section id="view-browse" class="view active">
+          <div id="browse-scroll" class="scroll-content no-scrollbar">
+            <!-- Pull to Refresh Spinner -->
+            <div id="browse-ptr" class="ptr-container">
+              <div class="ptr-spinner"></div>
+            </div>
+
+            <!-- Blacklist Notice Banner -->
+            <div id="blacklist-banner" class="blacklist-banner"></div>
+
+            <!-- Masonry Grid -->
+            <div id="browse-grid" class="masonry-grid grid-cols-2"></div>
+
+            <!-- Empty State -->
+            <div id="browse-empty" class="empty-state" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <div class="empty-state-title" data-i18n="no_results">No posts found</div>
+              <div class="empty-state-desc" data-i18n="no_results_desc">Try searching with different tags or check your blacklist.</div>
+            </div>
+
+            <!-- Infinite Scroll Loader -->
+            <div id="browse-loader" class="infinite-loader">
+              <div class="infinite-spinner"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 2: Search -->
+        <section id="view-search" class="view">
+          <div class="scroll-content no-scrollbar">
+            <!-- Search Bar with Autocomplete -->
+            <div class="search-bar-wrap">
+              <div style="display:flex; gap:8px;">
+                <input 
+                  type="text" 
+                  id="search-input" 
+                  class="input-control" 
+                  placeholder="Search tags (e.g. 1girl landscape)..." 
+                  data-i18n-placeholder="search_placeholder"
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="none"
+                />
+                <button id="btn-execute-search" class="btn btn-primary" style="padding:0 16px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="18" height="18" stroke-width="2.5">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Autocomplete Dropdown List -->
+              <div id="autocomplete-dropdown" class="autocomplete-dropdown"></div>
+            </div>
+
+            <!-- Active Selected Tag Chips -->
+            <div style="margin-top: 14px;">
+              <div id="search-chips-container" style="display:flex; flex-wrap:wrap; gap:8px; min-height: 20px;"></div>
+            </div>
+
+            <!-- Quick Filter Categories & Sort -->
+            <div style="margin-top: 20px;">
+              <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;" data-i18n="search_filters">
+                Quick Filters
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                <button class="tag-chip filter-chip-btn cat-general" data-tag="rating:general">rating:general</button>
+                <button class="tag-chip filter-chip-btn cat-general" data-tag="rating:sensitive">rating:sensitive</button>
+                <button class="tag-chip filter-chip-btn cat-general" data-tag="rating:questionable">rating:questionable</button>
+                <button class="tag-chip filter-chip-btn cat-general" data-tag="rating:explicit">rating:explicit</button>
+                <button class="tag-chip filter-chip-btn cat-metadata" data-tag="sort:score">sort:score</button>
+                <button class="tag-chip filter-chip-btn cat-metadata" data-tag="sort:id:desc">sort:id:desc</button>
+              </div>
+            </div>
+
+            <!-- Action: Bookmark/Save Current Search -->
+            <div style="margin-top: 16px;">
+              <button id="btn-save-current-search" class="btn btn-secondary" style="width:100%; font-size:0.85rem;">
+                ★ <span data-i18n="search_save_query">Save this search</span>
+              </button>
+            </div>
+
+            <!-- Saved Searches List -->
+            <div style="margin-top: 24px;">
+              <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;" data-i18n="search_saved">
+                Saved Searches
+              </div>
+              <div id="saved-searches-list" class="settings-card" style="padding: 0 14px;"></div>
+            </div>
+
+            <!-- Recent Searches List -->
+            <div style="margin-top: 24px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);" data-i18n="search_recent">
+                  Recent Searches
+                </div>
+                <button id="btn-clear-recent" class="btn-icon-subtle" style="font-size:0.75rem; color:var(--text-muted);" data-i18n="search_clear_recent">
+                  Clear
+                </button>
+              </div>
+              <div id="recent-searches-list" class="settings-card" style="padding: 0 14px;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 3: Favorites & Collections -->
+        <section id="view-favorites" class="view">
+          <div class="scroll-content no-scrollbar">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <div id="fav-collection-tabs" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px;" class="no-scrollbar"></div>
+              <button id="btn-new-collection" class="btn btn-secondary" style="height:36px; padding:0 10px; font-size:0.75rem;">+ New</button>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+              <button id="btn-export-fav" class="btn btn-secondary" style="flex:1; height:38px; font-size:0.8rem;" data-i18n="fav_export">Export JSON</button>
+              <button id="btn-import-fav" class="btn btn-secondary" style="flex:1; height:38px; font-size:0.8rem;" data-i18n="fav_import">Import JSON</button>
+              <input type="file" id="fav-import-file" accept=".json" style="display:none;" />
+            </div>
+
+            <!-- Favorites Grid -->
+            <div id="fav-grid" class="masonry-grid grid-cols-2"></div>
+
+            <!-- Empty State -->
+            <div id="fav-empty" class="empty-state" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+              </svg>
+              <div class="empty-state-title" data-i18n="fav_empty_title">No favorites yet</div>
+              <div class="empty-state-desc" data-i18n="fav_empty_desc">Tap the heart icon when viewing an image to save it here.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 4: Browsing History -->
+        <section id="view-history" class="view">
+          <div class="scroll-content no-scrollbar">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <span style="font-weight:700; font-size:1rem;" data-i18n="hist_title">Browsing History</span>
+              <button id="btn-clear-history" class="btn btn-danger" style="height:34px; padding:0 12px; font-size:0.75rem;" data-i18n="hist_clear">Clear All</button>
+            </div>
+
+            <div id="history-list"></div>
+
+            <div id="history-empty" class="empty-state" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <div class="empty-state-title" data-i18n="hist_empty_title">No history</div>
+              <div class="empty-state-desc" data-i18n="hist_empty_desc">Posts you open and inspect will appear here.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 5: Settings -->
+        <section id="view-settings" class="view">
+          <div class="scroll-content no-scrollbar">
+            <!-- Account Section -->
+            <div class="settings-section">
+              <div class="settings-section-title" data-i18n="settings_account">Gelbooru Credentials</div>
+              <div class="settings-card">
+                <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                  <label class="input-label" data-i18n="settings_user_id">User ID</label>
+                  <input type="text" id="setting-user-id" class="input-control" placeholder="e.g. 123456" />
+                </div>
+                <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                  <label class="input-label" data-i18n="settings_api_key">API Key</label>
+                  <input type="password" id="setting-api-key" class="input-control" placeholder="Paste your Gelbooru API key" />
+                </div>
+                <div class="settings-row" style="justify-content:flex-end;">
+                  <button id="btn-save-api" class="btn btn-primary" data-i18n="settings_test_conn">Save & Test API</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Display Section -->
+            <div class="settings-section">
+              <div class="settings-section-title" data-i18n="settings_display">Display & Appearance</div>
+              <div class="settings-card">
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_theme">Theme</span>
+                  </div>
+                  <select id="setting-theme" class="settings-select">
+                    <option value="dark" data-i18n="theme_dark">Dark (Charcoal)</option>
+                    <option value="amoled" data-i18n="theme_amoled">AMOLED (Pitch Black)</option>
+                    <option value="light" data-i18n="theme_light">Light</option>
+                  </select>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_accent">Accent Color</span>
+                  </div>
+                  <div class="accent-swatches">
+                    <div class="accent-swatch" data-accent="violet" style="background:#8b5cf6;"></div>
+                    <div class="accent-swatch" data-accent="blue" style="background:#3b82f6;"></div>
+                    <div class="accent-swatch" data-accent="cyan" style="background:#06b6d4;"></div>
+                    <div class="accent-swatch" data-accent="emerald" style="background:#10b981;"></div>
+                    <div class="accent-swatch" data-accent="rose" style="background:#f43f5e;"></div>
+                    <div class="accent-swatch" data-accent="amber" style="background:#f59e0b;"></div>
+                  </div>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_grid_cols">Grid Columns</span>
+                  </div>
+                  <select id="setting-columns" class="settings-select">
+                    <option value="1">1 Column</option>
+                    <option value="2">2 Columns</option>
+                    <option value="3">3 Columns</option>
+                    <option value="4">4 Columns</option>
+                  </select>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title">Image Quality</span>
+                  </div>
+                  <select id="setting-quality" class="settings-select">
+                    <option value="sample">Sample (Faster)</option>
+                    <option value="original">Original (HD)</option>
+                  </select>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_data_saver">Data Saver</span>
+                    <span class="settings-row-desc" data-i18n="settings_data_saver_desc">Lower thumbnail resolutions and disable preloading</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setting-data-saver" />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content & Safety -->
+            <div class="settings-section">
+              <div class="settings-section-title" data-i18n="settings_content">Content & Safety</div>
+              <div class="settings-card">
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_rating_filter">Content Rating Filter</span>
+                  </div>
+                  <select id="setting-rating-filter" class="settings-select">
+                    <option value="safe" data-i18n="rating_filter_safe">General Only (Safe)</option>
+                    <option value="standard" data-i18n="rating_filter_standard">General + Sensitive (Default)</option>
+                    <option value="all" data-i18n="rating_filter_all">Unrestricted (All Ratings)</option>
+                  </select>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_nsfw_blur">NSFW Gallery Blur</span>
+                    <span class="settings-row-desc" data-i18n="settings_nsfw_blur_desc">Blur sensitive/explicit thumbnails in the feed</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setting-nsfw-blur" checked />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+
+                <div class="settings-row" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_blacklist">Tag Blacklist</span>
+                    <span class="settings-row-desc">Automatically exclude posts containing these tags</span>
+                  </div>
+                  <textarea id="setting-blacklist" class="input-control" style="height:70px; padding:8px 12px; font-size:0.85rem;" placeholder="e.g. guro, scat, loli"></textarea>
+                  <button id="btn-save-blacklist" class="btn btn-secondary" style="align-self:flex-end; font-size:0.8rem;" data-i18n="settings_save_blacklist">Save Blacklist</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security Section -->
+            <div class="settings-section">
+              <div class="settings-section-title" data-i18n="settings_security">Security & Privacy</div>
+              <div class="settings-card">
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_pin_lock">PIN Lock</span>
+                    <span class="settings-row-desc" data-i18n="settings_pin_lock_desc">Require a 4-digit PIN on app launch</span>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setting-pin-lock" />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-row" style="justify-content:flex-end;">
+                  <button id="btn-set-pin" class="btn btn-secondary" style="font-size:0.8rem;" data-i18n="settings_set_pin">Set / Change PIN</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Language & Storage -->
+            <div class="settings-section">
+              <div class="settings-section-title" data-i18n="settings_storage">System & Language</div>
+              <div class="settings-card">
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_language">Language</span>
+                  </div>
+                  <select id="setting-language" class="settings-select">
+                    <option value="en">English</option>
+                    <option value="id">Bahasa Indonesia</option>
+                  </select>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" data-i18n="settings_clear_cache">Clear Cache</span>
+                    <span class="settings-row-desc" data-i18n="settings_clear_cache_desc">Remove cached thumbnails and API responses</span>
+                  </div>
+                  <button id="btn-clear-cache" class="btn btn-secondary" style="font-size:0.8rem;">Clear</button>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <span class="settings-row-title" style="color:#ef4444;" data-i18n="settings_reset_all">Reset All Data</span>
+                  </div>
+                  <button id="btn-reset-all" class="btn btn-danger" style="font-size:0.8rem;">Reset</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- About Section -->
+            <div class="settings-section" style="margin-top: 24px; text-align:center;">
+              <div style="font-weight:700; font-size:1.05rem;" data-i18n="settings_about">About BooruBrowser</div>
+              <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:4px;" data-i18n="about_desc">
+                Lightweight unofficial Gelbooru client for Android and Web. Inspired by Mori with pure HTML/CSS/JS and Capacitor.
+              </div>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:8px;" data-i18n="about_disclaimer">
+                Unofficial client, not affiliated with Gelbooru.
+              </div>
+              <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" data-i18n="version">
+                Version 1.0.0
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      <!-- Bottom Navigation Bar -->
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="browse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span class="nav-label" data-i18n="nav_browse">Browse</span>
+          <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item" data-tab="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span class="nav-label" data-i18n="nav_search">Search</span>
+          <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item" data-tab="favorites">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path>
+          </svg>
+          <span class="nav-label" data-i18n="nav_favorites">Favorites</span>
+          <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item" data-tab="history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          <span class="nav-label" data-i18n="nav_history">History</span>
+          <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item" data-tab="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="nav-label" data-i18n="nav_settings">Settings</span>
+          <div class="nav-indicator"></div>
+        </button>
+      </nav>
+
+      <!-- Floating Download Bubble -->
+      <div id="download-bubble" class="download-bubble">
+        <div class="download-bubble-spinner"></div>
+        <span id="download-bubble-text" class="download-bubble-text">Downloading...</span>
+      </div>
+
+      <!-- Fullscreen Media Viewer Overlay -->
+      <div id="media-viewer" class="media-viewer">
+        <div id="viewer-header" class="viewer-header">
+          <button id="btn-viewer-back" class="viewer-btn" title="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="22" height="22" stroke-width="2.5">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </button>
+          
+          <span id="viewer-index-tag" class="viewer-index-tag">1 / 40</span>
+
+          <div class="viewer-actions">
+            <button id="btn-viewer-fav" class="viewer-btn" title="Favorite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="20" height="20" stroke-width="2">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+              </svg>
+            </button>
+            <button id="btn-viewer-share" class="viewer-btn" title="Share">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="20" height="20" stroke-width="2">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+            </button>
+            <button id="btn-viewer-download" class="viewer-btn" title="Download">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="20" height="20" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+            <button id="btn-viewer-info" class="viewer-btn" title="Details">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="20" height="20" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="viewer-stage" class="viewer-stage"></div>
+        <div id="viewer-spinner" class="viewer-spinner"></div>
+
+        <div id="viewer-bottom-bar" class="viewer-bottom-bar">
+          <button id="btn-load-original" class="btn-load-original" data-i18n="load_original">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="16" height="16" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Load Original</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom Sheet Modal for Post Metadata & Tags -->
+      <div id="details-sheet-backdrop" class="bottom-sheet-backdrop"></div>
+      <div id="details-sheet" class="bottom-sheet">
+        <div class="sheet-handle-bar">
+          <div class="sheet-handle"></div>
+        </div>
+        <div class="sheet-header">
+          <span class="sheet-title" data-i18n="details_title">Post Details</span>
+          <button id="btn-close-sheet" class="btn-icon-subtle touch-target">✕</button>
+        </div>
+        <div id="sheet-details-content" class="sheet-content no-scrollbar"></div>
+      </div>
+
+      <!-- 18+ Age Gate Modal -->
+      <div id="age-gate-modal" class="modal-overlay">
+        <div class="modal-box">
+          <div class="modal-title" data-i18n="gate_title">Age Verification</div>
+          <div class="modal-body" data-i18n="gate_body">
+            Gelbooru contains user-submitted anime artwork, including NSFW and adult content. You must be at least 18 years old (or legal age in your jurisdiction) to proceed.
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+            <button id="btn-age-accept" class="btn btn-primary" data-i18n="gate_accept">I am 18 or Older</button>
+            <button id="btn-age-decline" class="btn btn-secondary" data-i18n="gate_decline">Exit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4-Digit PIN Lock Modal -->
+      <div id="pin-lock-modal" class="modal-overlay">
+        <div class="modal-box" style="max-width:320px;">
+          <div id="pin-modal-title" class="modal-title" data-i18n="pin_enter">Enter PIN Code</div>
+          <div class="pin-display">
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+          </div>
+          <div class="pin-keypad">
+            <button class="pin-key" data-key="1">1</button>
+            <button class="pin-key" data-key="2">2</button>
+            <button class="pin-key" data-key="3">3</button>
+            <button class="pin-key" data-key="4">4</button>
+            <button class="pin-key" data-key="5">5</button>
+            <button class="pin-key" data-key="6">6</button>
+            <button class="pin-key" data-key="7">7</button>
+            <button class="pin-key" data-key="8">8</button>
+            <button class="pin-key" data-key="9">9</button>
+            <button class="pin-key" style="opacity:0;" disabled></button>
+            <button class="pin-key" data-key="0">0</button>
+            <button class="pin-key" data-key="backspace">⌫</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Global Toast Container -->
+      <div id="toast-container" class="toast-container"></div>
+    </div>
+
+    <!-- Application Script Entry Point -->
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
