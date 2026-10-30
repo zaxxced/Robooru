@@ -57,7 +57,13 @@ export class HistoryController {
     [...viewed, ...downloaded].forEach(item => {
       const key = String(item.post?.id ?? item.id);
       const previous = merged.get(key);
-      if (!previous || Number(item.viewed_at) > Number(previous.viewed_at)) merged.set(key, item);
+      const newest = !previous || Number(item.viewed_at) > Number(previous.viewed_at) ? item : previous;
+      const localUrl = item.post?.local_file_url || previous?.post?.local_file_url || '';
+      merged.set(key, {
+        ...newest,
+        post: { ...(newest.post || {}), local_file_url: localUrl },
+        downloaded: Boolean(item.downloaded || previous?.downloaded)
+      });
     });
     this.historyItems = [...merged.values()]
       .sort((a, b) => Number(b.viewed_at) - Number(a.viewed_at));
