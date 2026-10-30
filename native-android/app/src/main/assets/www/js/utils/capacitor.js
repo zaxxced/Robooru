@@ -227,7 +227,7 @@ export const downloadMedia = async (url, filename, onProgress) => {
   try {
     // Preferred on Android: hand the file to the system DownloadManager (see native/MainActivity.java).
     // It streams natively, shows a notification, and saves into Pictures/Booru.
-    if (isNative() && window.BooruNative && typeof window.BooruNative.download === 'function') {
+    if (window.BooruNative && typeof window.BooruNative.download === 'function') {
       const downloadId = window.BooruNative.download(url, filename);
       if (downloadId > 0) {
         if (onProgress) onProgress(0, 'Waiting for download…');
