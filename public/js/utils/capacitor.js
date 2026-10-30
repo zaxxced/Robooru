@@ -222,11 +222,9 @@ export const downloadMedia = async (url, filename, onProgress) => {
     // It streams natively, shows a notification, and saves into Pictures/Booru.
     if (isNative() && window.BooruNative && typeof window.BooruNative.download === 'function') {
       if (onProgress) onProgress(50, 'Starting download...');
-      // Returns the DownloadManager id (> 0) on success, -1 on failure
-      const id = Number(window.BooruNative.download(url, filename));
-      if (id > 0) {
+      if (window.BooruNative.download(url, filename)) {
         if (onProgress) onProgress(100, 'Saving to Pictures/Booru (see notification)');
-        return { native: true, id };
+        return true;
       }
     }
 

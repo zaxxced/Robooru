@@ -2,7 +2,6 @@ package com.example.boorubrowser;
 
 import android.app.DownloadManager;
 import android.content.Context;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -14,9 +13,6 @@ import android.webkit.WebView;
 import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebViewClient;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -136,13 +132,12 @@ public class MainActivity extends BridgeActivity {
     }
 
     private class DownloadBridge {
-        /** Returns the DownloadManager id (> 0) on success, or -1 on failure. */
         @JavascriptInterface
         @SuppressWarnings("deprecation")
-        public long download(String url, String filename) {
+        public boolean download(String url, String filename) {
             try {
                 if (url == null || !url.startsWith("https://")) {
-                    return -1;
+                    return false;
                 }
                 String safeName = (filename == null || filename.isEmpty())
                         ? "gelbooru_image"
@@ -157,55 +152,11 @@ public class MainActivity extends BridgeActivity {
                 request.allowScanningByMediaScanner();
 
                 DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-                return dm.enqueue(request);
+                dm.enqueue(request);
+                return true;
             } catch (Exception e) {
-                return -1;
+                return false;
             }
-        }
-
-        /**
-         * Progress for the given comma-separated download ids, as a JSON array:
-         * [{"id":12,"status":2,"downloaded":1048576,"total":2097152}, ...]
-         * status: 1 pending, 2 running, 4 paused, 8 successful, 16 failed. total is -1 when unknown.
-         * Ids that DownloadManager no longer knows about are simply left out.
-         */
-        @JavascriptInterface
-        public String getDownloadStatus(String idsCsv) {
-            JSONArray result = new JSONArray();
-            try {
-                if (idsCsv == null || idsCsv.trim().isEmpty()) {
-                    return result.toString();
-                }
-                String[] parts = idsCsv.split(",");
-                long[] ids = new long[parts.length];
-                for (int i = 0; i < parts.length; i++) {
-                    ids[i] = Long.parseLong(parts[i].trim());
-                }
-
-                DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-                Cursor c = dm.query(new DownloadManager.Query().setFilterById(ids));
-                if (c != null) {
-                    try {
-                        int idCol = c.getColumnIndex(DownloadManager.COLUMN_ID);
-                        int statusCol = c.getColumnIndex(DownloadManager.COLUMN_STATUS);
-                        int doneCol = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR);
-                        int totalCol = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES);
-                        while (c.moveToNext()) {
-                            JSONObject o = new JSONObject();
-                            o.put("id", c.getLong(idCol));
-                            o.put("status", c.getInt(statusCol));
-                            o.put("downloaded", c.getLong(doneCol));
-                            o.put("total", c.getLong(totalCol));
-                            result.put(o);
-                        }
-                    } finally {
-                        c.close();
-                    }
-                }
-            } catch (Exception e) {
-                // fall through with whatever we collected
-            }
-            return result.toString();
         }
     }
 }

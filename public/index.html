@@ -20,7 +20,6 @@
     <link rel="stylesheet" href="css/gallery.css" />
     <link rel="stylesheet" href="css/viewer.css" />
     <link rel="stylesheet" href="css/settings.css" />
-    <link rel="stylesheet" href="css/downloads.css" />
   </head>
   <body>
     <div id="app">
@@ -505,26 +504,6 @@
             <span>Load Original</span>
           </button>
         </div>
-      </div>
-
-      <!-- Floating Downloads Widget (bottom-left): must stay after #media-viewer (sibling selector in CSS) -->
-      <div id="downloads-widget" class="dl-widget">
-        <div id="dl-popup" class="dl-popup">
-          <div class="dl-popup-header">
-            <span class="dl-popup-title" data-i18n="downloads_title">Downloads</span>
-            <button id="dl-clear" class="dl-clear" data-i18n="downloads_clear">Clear finished</button>
-          </div>
-          <div id="dl-list" class="dl-list no-scrollbar"></div>
-        </div>
-        <button id="dl-fab" class="dl-fab" title="Downloads" aria-label="Downloads">
-          <span class="dl-ring"></span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span id="dl-badge" class="dl-badge">0</span>
-        </button>
       </div>
 
       <!-- Bottom Sheet Modal for Post Metadata & Tags -->
