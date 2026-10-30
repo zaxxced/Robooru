@@ -69,46 +69,109 @@
   transform: scaleX(1);
 }
 
-/* Floating Download Bubble */
-.download-bubble {
+/* Floating Download Manager */
+.download-fab {
   position: fixed;
+  left: calc(var(--sal) + 16px);
   bottom: calc(var(--nav-height) + var(--sab) + 16px);
-  right: 16px;
-  background-color: var(--bg-surface-elevated);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-full);
-  padding: 8px 16px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 90;
-  transform: translateY(120%);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform var(--transition-spring), opacity var(--transition-fast);
-}
-
-.download-bubble.show {
-  transform: translateY(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.download-bubble-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--border-subtle);
-  border-top-color: var(--accent-primary);
+  justify-content: center;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  color: var(--text-primary);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 90;
+  transition: transform var(--transition-spring), background var(--transition-fast);
 }
+.download-fab:active { transform: scale(0.93); }
+.download-fab.active { color: var(--accent-primary); }
+.download-count {
+  display: none;
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary);
+  color: var(--accent-text);
+  font-size: 0.68rem;
+  font-weight: 800;
+  border: 2px solid var(--bg-main);
+}
+.download-count.visible { display: flex; }
 
-.download-bubble-text {
+.download-popup {
+  position: fixed;
+  left: calc(var(--sal) + 16px);
+  bottom: calc(var(--nav-height) + var(--sab) + 78px);
+  width: min(340px, calc(100vw - var(--sal) - var(--sar) - 32px));
+  max-height: min(420px, calc(100dvh - var(--sat) - var(--nav-height) - var(--sab) - 104px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.42);
+  z-index: 89;
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+  transform-origin: bottom left;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity var(--transition-fast), transform var(--transition-spring), visibility var(--transition-fast);
+}
+.download-popup.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  visibility: visible;
+}
+.download-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.download-popup-title { font-size: 0.98rem; font-weight: 750; color: var(--text-primary); }
+.download-popup-subtitle { margin-top: 2px; font-size: 0.75rem; color: var(--text-muted); }
+.download-popup-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+}
+.download-list { overflow-y: auto; overscroll-behavior: contain; }
+.download-empty { padding: 24px 14px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.download-item { padding: 12px 14px; border-bottom: 1px solid var(--border-subtle); }
+.download-item:last-child { border-bottom: 0; }
+.download-item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.download-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--text-primary);
 }
+.download-percent { flex-shrink: 0; font-size: 0.75rem; font-weight: 750; color: var(--accent-primary); }
+.download-progress-track { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: var(--border-subtle); }
+.download-progress-fill { height: 100%; border-radius: inherit; background: var(--accent-primary); transition: width 0.2s ease; }
+.download-item.complete .download-progress-fill { background: #22c55e; }
+.download-item.failed .download-progress-fill { background: #ef4444; }
+.download-item.failed .download-percent, .download-item.failed .download-status { color: #ef4444; }
+.download-status { margin-top: 5px; font-size: 0.72rem; color: var(--text-muted); }
 
 /* Buttons */
 .btn {
