@@ -14,6 +14,7 @@ import { SearchController } from './ui/search.js';
 import { FavoritesController } from './ui/favorites.js';
 import { HistoryController } from './ui/history.js';
 import { SettingsController } from './ui/settings.js';
+import { DownloadsController } from './ui/downloads.js';
 
 class App {
   constructor() {
@@ -51,6 +52,7 @@ class App {
     this.favorites = new FavoritesController(this);
     this.history = new HistoryController(this);
     this.settingsController = new SettingsController(this);
+    this.downloads = new DownloadsController();
 
     // 6. Initialize Controller DOM Listeners
     this.gate.init();
@@ -61,6 +63,7 @@ class App {
     this.favorites.init();
     this.history.init();
     this.settingsController.init();
+    this.downloads.init();
 
     // 7. Setup Navigation Tabs
     this.setupNav();
