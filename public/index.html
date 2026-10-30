@@ -73,15 +73,6 @@
               <div class="infinite-spinner"></div>
             </div>
           </div>
-          <div id="browse-page-controls" class="browse-page-controls" aria-label="Gallery pages">
-            <button id="browse-page-prev" class="browse-page-button" type="button" aria-label="Previous page" title="Previous page">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
-            <span id="browse-page-label" class="browse-page-label">Page 1</span>
-            <button id="browse-page-next" class="browse-page-button" type="button" aria-label="Next page" title="Next page">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-            </button>
-          </div>
         </section>
 
         <!-- View 2: Search -->
@@ -190,23 +181,23 @@
           </div>
         </section>
 
-        <!-- View 4: Browsing History -->
+        <!-- View 4: Download History -->
         <section id="view-history" class="view">
           <div class="scroll-content no-scrollbar">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-              <span style="font-weight:700; font-size:1rem;" data-i18n="hist_title">Browsing History</span>
-              <button id="btn-clear-history" class="btn btn-danger" style="height:34px; padding:0 12px; font-size:0.75rem;" data-i18n="hist_clear">Clear All</button>
+              <span style="font-weight:700; font-size:1rem;" data-i18n="hist_title">Downloaded files</span>
+              <button id="btn-clear-download-history" class="btn btn-danger" style="height:34px; padding:0 12px; font-size:0.75rem;" >Clear completed</button>
             </div>
 
-            <div id="history-list"></div>
+            <div id="downloads-history-list"></div>
 
-            <div id="history-empty" class="empty-state" style="display:none;">
+            <div id="downloads-history-empty" class="empty-state" style="display:none;">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
-              <div class="empty-state-title" data-i18n="hist_empty_title">No history</div>
-              <div class="empty-state-desc" data-i18n="hist_empty_desc">Posts you open and inspect will appear here.</div>
+              <div class="empty-state-title" >No downloads yet</div>
+              <div class="empty-state-desc" >Downloaded files will appear here.</div>
             </div>
           </div>
         </section>
@@ -435,10 +426,9 @@
 
         <button class="nav-item" data-tab="history">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          <span class="nav-label" data-i18n="nav_history">History</span>
+          <span class="nav-label" data-i18n="nav_history">Downloads</span>
           <div class="nav-indicator"></div>
         </button>
 
@@ -451,6 +441,16 @@
           <div class="nav-indicator"></div>
         </button>
       </nav>
+
+      <div id="browse-page-controls" class="browse-page-controls" aria-label="Gallery pages">
+        <button id="browse-page-prev" class="browse-page-button" type="button" aria-label="Previous page" title="Previous page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span id="browse-page-label" class="browse-page-label">Page 1</span>
+        <button id="browse-page-next" class="browse-page-button" type="button" aria-label="Next page" title="Next page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
 
       <!-- Floating Download Manager -->
       <button id="download-fab" class="download-fab" type="button" aria-label="Downloads" aria-expanded="false">
