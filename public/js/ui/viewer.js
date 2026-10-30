@@ -283,11 +283,38 @@ export class ViewerController {
     const ext = post.fileType || 'jpg';
     const filename = `gelbooru_${post.id}.${ext}`;
     
-    this.app.showDownloadBubble(15, t('download_starting'));
+    // On Android the floating downloads widget shows progress; the old bubble is only for the web fallback
+    const hasNativeDownloads = !!(window.BooruNative && typeof window.BooruNative.download === 'function');
+    const onProgress = hasNativeDownloads
+      ? null
+      : (percent, msg) => this.app.showDownloadBubble(percent, msg);
+    if (onProgress) this.app.showDownloadBubble(15, t('download_starting'));
 
-    await downloadMedia(post.file_url, filename, (percent, msg) => {
-      this.app.showDownloadBubble(percent, msg);
-    });
+    const result = await downloadMedia(post.file_url, filename, onProgress);
+
+    if (result && result.native) {
+      this.app.downloads?.add({
+        id: result.id,
+        name: filename,
+        thumb: post.preview_url || post.sample_url || '',
+        status: 'running'
+      });
+    } else if (result) {
+      // Web fallback finished immediately
+      this.app.downloads?.add({
+        id: null,
+        name: filename,
+        thumb: post.preview_url || post.sample_url || '',
+        status: 'done'
+      });
+    } else if (hasNativeDownloads) {
+      this.app.downloads?.add({
+        id: null,
+        name: filename,
+        thumb: post.preview_url || post.sample_url || '',
+        status: 'failed'
+      });
+    }
   }
 
   toggleUI() {
