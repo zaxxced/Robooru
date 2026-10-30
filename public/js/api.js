@@ -111,20 +111,15 @@ export const fetchPosts = async ({
   limit = 40,
   apiKey = '',
   userId = '',
-  ratingFilter = 'standard',
+  ratingFilter = 'general', // Android-safe build: general-rated posts only
   blacklist = []
 }) => {
-  // Construct search query
-  let finalTags = tags.trim();
-
-  // If rating filter is enforced
-  if (ratingFilter === 'safe' && !finalTags.includes('rating:')) {
-    finalTags = finalTags ? `${finalTags} rating:general` : 'rating:general';
-  } else if (ratingFilter === 'standard' && !finalTags.includes('rating:')) {
-    // In Gelbooru, multiple ratings can be separated or general+sensitive
-    // Gelbooru allows rating:general or rating:sensitive
-    // We let both through in standard filter, and filter questionable/explicit client-side if needed
-  }
+  // Normalize tag input
+  // Keep the public and Android API clients consistent without allowing non-general results.
+  // Remove user-supplied rating operators and enforce rating:general on every request.
+  let finalTags = tags.trim().replace(/\s+/g, ' ').trim();
+  finalTags = finalTags.replace(/\brating:\w+\b/gi, '').replace(/\s+/g, ' ').trim();
+  finalTags = finalTags ? `${finalTags} rating:general` : 'rating:general';
 
   let endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=post&q=index&json=1&pid=${page}&limit=${limit}`;
   if (finalTags) {
@@ -135,13 +130,13 @@ export const fetchPosts = async ({
   }
 
   // Check memory cache
-  const cacheKey = `posts_${finalTags}_${page}_${limit}`;
+  const cacheKey = `posts_${finalTags}_${page}_${limit}_${apiKey ? 'auth' : 'anon'}_general`;
   if (memoryCache.has(cacheKey)) {
     return memoryCache.get(cacheKey);
   }
 
   const data = await httpGet(endpoint);
-  
+
   // Gelbooru returns { "@attributes": { count, limit, offset }, "post": [...] }
   let rawPosts = [];
   let totalCount = 0;
@@ -160,12 +155,8 @@ export const fetchPosts = async ({
   // Normalize post format
   let posts = rawPosts.map(p => normalizePost(p));
 
-  // Apply Rating Filter
-  if (ratingFilter === 'safe') {
-    posts = posts.filter(p => p.rating === 'general' || p.rating === 'g');
-  } else if (ratingFilter === 'standard') {
-    posts = posts.filter(p => p.rating === 'general' || p.rating === 'g' || p.rating === 'sensitive' || p.rating === 's');
-  }
+  // Enforce the general-only content policy even if the server returns unexpected ratings.
+  posts = posts.filter(p => p.rating === 'general' || p.rating === 'g');
 
   // Apply Blacklist
   let hiddenByBlacklist = 0;
