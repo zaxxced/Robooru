@@ -180,7 +180,10 @@ export class GalleryController {
 
   downloadPost(post) {
     const filename = `gelbooru_${post.id}.${post.fileType || 'jpg'}`;
-    const downloadId = this.app.downloads?.start(filename);
+    const downloadId = this.app.downloads?.start(filename, {
+      post,
+      thumb: post.preview_url || post.sample_url || post.file_url
+    });
     downloadMedia(post.file_url, filename, (percent, message, status) => {
       if (downloadId != null) this.app.downloads?.update(downloadId, percent, message, status);
     }).then(success => {
@@ -242,6 +245,7 @@ export class GalleryController {
     this.gridContainer.className = `masonry-grid grid-cols-${cols}`;
     this.gridContainer.innerHTML = '';
     this.columnHeights = new Array(cols).fill(0);
+    this.renderToken = (this.renderToken || 0) + 1;
 
     for (let c = 0; c < cols; c++) {
       const colDiv = document.createElement('div');
@@ -254,31 +258,43 @@ export class GalleryController {
 
   appendPostsToGrid(newPosts, startIndex) {
     const cols = parseInt(this.app.settings.grid_columns, 10) || 2;
-    const colElements = this.gridContainer.querySelectorAll('.masonry-col');
-    if (colElements.length === 0) return;
+    const renderToken = this.renderToken;
+    let cursor = 0;
+    const batchSize = 6;
 
-    newPosts.forEach((post, i) => {
-      const postIndex = startIndex + i;
-      const card = this.createPostCard(post, postIndex);
+    // Insert a small batch per frame so WebView can paint early thumbnails
+    // before the remaining cards are added.
+    const appendBatch = () => {
+      if (renderToken !== this.renderToken) return;
+      const colElements = this.gridContainer.querySelectorAll('.masonry-col');
+      if (colElements.length === 0) return;
 
-      // Find shortest column
-      let minCol = 0;
-      let minHeight = this.columnHeights[0] || 0;
-      for (let c = 1; c < cols; c++) {
-        if ((this.columnHeights[c] || 0) < minHeight) {
-          minHeight = this.columnHeights[c] || 0;
-          minCol = c;
+      const end = Math.min(cursor + batchSize, newPosts.length);
+      for (; cursor < end; cursor++) {
+        const post = newPosts[cursor];
+        const postIndex = startIndex + cursor;
+        const card = this.createPostCard(post, postIndex);
+
+        let minCol = 0;
+        let minHeight = this.columnHeights[0] || 0;
+        for (let c = 1; c < cols; c++) {
+          if ((this.columnHeights[c] || 0) < minHeight) {
+            minHeight = this.columnHeights[c] || 0;
+            minCol = c;
+          }
         }
+
+        const estimatedHeight = Math.max(140, Math.min(360, 200 / (post.aspect_ratio || 0.75)));
+        this.columnHeights[minCol] = (this.columnHeights[minCol] || 0) + estimatedHeight;
+        if (colElements[minCol]) colElements[minCol].appendChild(card);
       }
 
-      // Estimate card height from aspect ratio
-      const estimatedHeight = Math.max(140, Math.min(360, 200 / (post.aspect_ratio || 0.75)));
-      this.columnHeights[minCol] = (this.columnHeights[minCol] || 0) + estimatedHeight;
-
-      if (colElements[minCol]) {
-        colElements[minCol].appendChild(card);
+      if (cursor < newPosts.length) {
+        requestAnimationFrame(appendBatch);
       }
-    });
+    };
+
+    requestAnimationFrame(appendBatch);
   }
 
   createPostCard(post, index) {
