@@ -20,7 +20,6 @@ class App {
   constructor() {
     this.currentTab = 'browse';
     this.settings = {};
-    this.downloadBubbleTimeout = null;
   }
 
   async init() {
@@ -161,22 +160,6 @@ class App {
     }, 2800);
   }
 
-  showDownloadBubble(percent, message) {
-    const bubble = document.getElementById('download-bubble');
-    const textEl = document.getElementById('download-bubble-text');
-    if (!bubble || !textEl) return;
-
-    clearTimeout(this.downloadBubbleTimeout);
-    textEl.textContent = `${message} (${percent}%)`;
-    bubble.classList.add('show');
-
-    if (percent >= 100) {
-      textEl.textContent = message;
-      this.downloadBubbleTimeout = setTimeout(() => {
-        bubble.classList.remove('show');
-      }, 3500);
-    }
-  }
 }
 
 // Instantiate and start app
