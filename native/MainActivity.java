@@ -2,6 +2,7 @@ package com.example.boorubrowser;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -134,10 +135,10 @@ public class MainActivity extends BridgeActivity {
     private class DownloadBridge {
         @JavascriptInterface
         @SuppressWarnings("deprecation")
-        public boolean download(String url, String filename) {
+        public long download(String url, String filename) {
             try {
                 if (url == null || !url.startsWith("https://")) {
-                    return false;
+                    return -1;
                 }
                 String safeName = (filename == null || filename.isEmpty())
                         ? "gelbooru_image"
@@ -152,10 +153,30 @@ public class MainActivity extends BridgeActivity {
                 request.allowScanningByMediaScanner();
 
                 DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-                dm.enqueue(request);
-                return true;
+                return dm.enqueue(request);
             } catch (Exception e) {
-                return false;
+                return -1;
+            }
+        }
+
+        @JavascriptInterface
+        public String downloadProgress(long downloadId) {
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
+            try (Cursor cursor = dm.query(query)) {
+                if (cursor == null || !cursor.moveToFirst()) {
+                    return "failed,0,0";
+                }
+                int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                long downloaded = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                long total = cursor.getLong(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                String state;
+                if (status == DownloadManager.STATUS_SUCCESSFUL) state = "complete";
+                else if (status == DownloadManager.STATUS_FAILED) state = "failed";
+                else state = "active";
+                return state + "," + downloaded + "," + total;
+            } catch (Exception e) {
+                return "failed,0,0";
             }
         }
     }
