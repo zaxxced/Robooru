@@ -218,8 +218,18 @@ export const shareMedia = async ({ title, text, url }) => {
 // Download Media File
 export const downloadMedia = async (url, filename, onProgress) => {
   try {
+    // Preferred on Android: hand the file to the system DownloadManager (see native/MainActivity.java).
+    // It streams natively, shows a notification, and saves into Pictures/Booru.
+    if (isNative() && window.BooruNative && typeof window.BooruNative.download === 'function') {
+      if (onProgress) onProgress(50, 'Starting download...');
+      if (window.BooruNative.download(url, filename)) {
+        if (onProgress) onProgress(100, 'Saving to Pictures/Booru (see notification)');
+        return true;
+      }
+    }
+
     if (onProgress) onProgress(10, 'Initiating download...');
-    
+
     // In Native Android Capacitor:
     const plugins = getPlugins();
     if (isNative() && plugins.Filesystem) {

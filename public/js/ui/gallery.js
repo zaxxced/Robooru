@@ -253,9 +253,9 @@ export class GalleryController {
     img.style.top = '0';
     img.style.left = '0';
 
-    // Data saver uses lower-res preview url
-    const thumbUrl = this.app.settings.data_saver ? (post.preview_url || post.sample_url) : (post.sample_url || post.preview_url);
-    const thumbCandidates = [thumbUrl, post.preview_url, post.sample_url]
+    // Grid always uses the small preview image (tens of KB) for fast scrolling;
+    // the full-size sample is only loaded in the fullscreen viewer.
+    const thumbCandidates = [post.preview_url, post.sample_url]
       .filter((u, i, a) => u && a.indexOf(u) === i);
     setImageSrc(img, thumbCandidates, {
       onLoad: () => img.classList.add('loaded')

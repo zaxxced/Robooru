@@ -46,6 +46,17 @@ jobs:
             echo "Android directory already exists."
           fi
 
+      # Streams gelbooru.com images natively with the right Referer, and adds a DownloadManager bridge.
+      - name: Install native helpers
+        run: |
+          DEST=android/app/src/main/java/com/example/boorubrowser/MainActivity.java
+          if [ ! -f "$DEST" ]; then
+            echo "MainActivity.java not found at $DEST. Found:"
+            find android -name 'MainActivity.java'
+            exit 1
+          fi
+          cp native/MainActivity.java "$DEST"
+
       - name: Sync Capacitor project
         run: npx cap sync android
 
