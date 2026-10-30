@@ -12,7 +12,6 @@ import { ViewerController } from './ui/viewer.js';
 import { GalleryController } from './ui/gallery.js';
 import { SearchController } from './ui/search.js';
 import { FavoritesController } from './ui/favorites.js';
-import { HistoryController } from './ui/history.js';
 import { SettingsController } from './ui/settings.js';
 import { DownloadsController } from './ui/downloads.js';
 
@@ -49,7 +48,6 @@ class App {
     this.gallery = new GalleryController(this);
     this.search = new SearchController(this);
     this.favorites = new FavoritesController(this);
-    this.history = new HistoryController(this);
     this.settingsController = new SettingsController(this);
     this.downloads = new DownloadsController();
 
@@ -60,7 +58,6 @@ class App {
     this.gallery.init();
     this.search.init();
     this.favorites.init();
-    this.history.init();
     this.settingsController.init();
     this.downloads.init();
 
@@ -127,7 +124,7 @@ class App {
     } else if (tabName === 'favorites') {
       this.favorites.activate();
     } else if (tabName === 'history') {
-      this.history.activate();
+      this.downloads.activate();
     } else if (tabName === 'browse' && this.gallery.posts.length === 0) {
       this.gallery.loadInitial();
     }
