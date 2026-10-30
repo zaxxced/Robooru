@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
             webChromeClient = WebChromeClient()
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                    interceptDownloadedFile(request.url)?.let { return it }
                     assetLoader.shouldInterceptRequest(request.url)?.let { return it }
                     val uri = request.url
                     val host = uri.host.orEmpty()
@@ -76,6 +77,24 @@ class MainActivity : ComponentActivity() {
                 webView.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));", null)
             }
         })
+    }
+
+    private fun interceptDownloadedFile(uri: Uri): WebResourceResponse? {
+        if (uri.scheme != "https" || uri.host != "localhost" || !uri.path.orEmpty().startsWith("/downloads/")) return null
+        val id = uri.lastPathSegment?.toLongOrNull() ?: return null
+        return try {
+            val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+            manager.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
+                if (cursor == null || !cursor.moveToFirst()) return null
+                if (cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) != DownloadManager.STATUS_SUCCESSFUL) return null
+                val mimeIndex = cursor.getColumnIndex(DownloadManager.COLUMN_MEDIA_TYPE)
+                val mime = if (mimeIndex >= 0) cursor.getString(mimeIndex) else null
+                val descriptor = manager.openDownloadedFile(id)
+                val headers = HashMap<String, String>()
+                headers["Cache-Control"] = "no-store"
+                WebResourceResponse(mime?.takeIf { it.isNotBlank() } ?: "application/octet-stream", null, 200, "OK", headers, android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor))
+            }
+        } catch (_: Exception) { null }
     }
 
     private fun fetchWithReferer(url: String, requestHeaders: Map<String, String>): WebResourceResponse? {
@@ -118,6 +137,18 @@ class MainActivity : ComponentActivity() {
                 }
                 (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
             } catch (_: Exception) { -1 }
+        }
+
+        @JavascriptInterface
+        fun getDownloadedFileUrl(id: Long): String {
+            return try {
+                val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                manager.query(DownloadManager.Query().setFilterById(id)).use { cursor ->
+                    if (cursor != null && cursor.moveToFirst() &&
+                        cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) == DownloadManager.STATUS_SUCCESSFUL
+                    ) "https://localhost/downloads/$id" else ""
+                }
+            } catch (_: Exception) { "" }
         }
 
         @JavascriptInterface
