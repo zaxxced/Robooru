@@ -46,7 +46,7 @@ export class DownloadsController {
       createdAt: Date.now()
     };
     this.items.unshift(item);
-    this.items = this.items.slice(0, 5);
+    this.items = this.items.slice(0, 100);
     this.save();
     this.render();
     this.renderHistory();
@@ -113,7 +113,7 @@ export class DownloadsController {
       this.list.innerHTML = '<div class="download-empty">No downloads yet</div>';
       return;
     }
-    this.list.innerHTML = this.items.map(item => {
+    this.list.innerHTML = this.items.slice(0, 5).map(item => {
       const statusLabel = item.status === 'complete' ? 'Completed'
         : item.status === 'failed' ? 'Failed'
         : item.message || 'Downloading…';
