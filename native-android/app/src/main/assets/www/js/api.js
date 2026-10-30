@@ -115,15 +115,10 @@ export const fetchPosts = async ({
   blacklist = []
 }) => {
   // Construct search query
-  let finalTags = tags.trim();
-
-  // If rating filter is enforced
-  if (ratingFilter === 'safe' && !finalTags.includes('rating:')) {
+  // Android build keeps browsing restricted to general-rated posts.
+  let finalTags = tags.trim().replace(/\\brating:(?:sensitive|questionable|explicit)\\b/gi, '').replace(/\\s+/g, ' ').trim();
+  if (!/\\brating:general\\b/i.test(finalTags)) {
     finalTags = finalTags ? `${finalTags} rating:general` : 'rating:general';
-  } else if (ratingFilter === 'standard' && !finalTags.includes('rating:')) {
-    // In Gelbooru, multiple ratings can be separated or general+sensitive
-    // Gelbooru allows rating:general or rating:sensitive
-    // We let both through in standard filter, and filter questionable/explicit client-side if needed
   }
 
   let endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=post&q=index&json=1&pid=${page}&limit=${limit}`;
@@ -161,11 +156,7 @@ export const fetchPosts = async ({
   let posts = rawPosts.map(p => normalizePost(p));
 
   // Apply Rating Filter
-  if (ratingFilter === 'safe') {
-    posts = posts.filter(p => p.rating === 'general' || p.rating === 'g');
-  } else if (ratingFilter === 'standard') {
-    posts = posts.filter(p => p.rating === 'general' || p.rating === 'g' || p.rating === 'sensitive' || p.rating === 's');
-  }
+  posts = posts.filter(p => p.rating === 'general' || p.rating === 'g');
 
   // Apply Blacklist
   let hiddenByBlacklist = 0;
