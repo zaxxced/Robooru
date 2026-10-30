@@ -116,8 +116,8 @@ export const fetchPosts = async ({
 }) => {
   // Construct search query
   // Android build keeps browsing restricted to general-rated posts.
-  let finalTags = tags.trim().replace(/\\brating:(?:sensitive|questionable|explicit)\\b/gi, '').replace(/\\s+/g, ' ').trim();
-  if (!/\\brating:general\\b/i.test(finalTags)) {
+  let finalTags = tags.trim().replace(/\brating:(?:sensitive|questionable|explicit)\b/gi, '').replace(/\s+/g, ' ').trim();
+  if (!/\brating:general\b/i.test(finalTags)) {
     finalTags = finalTags ? `${finalTags} rating:general` : 'rating:general';
   }
 
