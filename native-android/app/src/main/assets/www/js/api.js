@@ -75,7 +75,18 @@ export const httpGet = async (url) => {
     }
   }
 
-  // Method 2: Web Preview via Vite Proxy
+  // Method 2: Android WebView native bridge proxy.
+  // MainActivity intercepts requests to gelbooru.com and adds the required Referer
+  // header. Use the absolute URL here; /api/gelbooru only exists in the Vite dev server.
+  if (window.BooruNative && url.startsWith(GELBOORU_BASE)) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Gelbooru request failed: HTTP ${res.status}`);
+    }
+    return await res.json();
+  }
+
+  // Method 3: Web Preview via Vite Proxy
   if (url.startsWith(GELBOORU_BASE)) {
     const proxyUrl = url.replace(GELBOORU_BASE, '/api/gelbooru');
     try {
@@ -88,7 +99,7 @@ export const httpGet = async (url) => {
     }
   }
 
-  // Method 3: Direct Fetch or Public CORS proxy
+  // Method 4: Direct Fetch or Public CORS proxy
   try {
     const res = await fetch(url);
     if (res.ok) return await res.json();
