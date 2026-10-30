@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
         window.navigationBarColor = android.graphics.Color.rgb(18, 20, 26)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         assetLoader = WebViewAssetLoader.Builder()
+            .setDomain("localhost")
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
         webView = WebView(this).apply {
@@ -61,7 +62,7 @@ class MainActivity : ComponentActivity() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val uri = request.url
                     if (uri.scheme == "http" || uri.scheme == "https") {
-                        if (uri.host == "appassets.androidplatform.net" || uri.host?.endsWith("gelbooru.com") == true) return false
+                        if (uri.host == "localhost" || uri.host?.endsWith("gelbooru.com") == true) return false
                         return try { startActivity(Intent(Intent.ACTION_VIEW, uri)); true } catch (_: Exception) { true }
                     }
                     return false
@@ -69,7 +70,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         setContentView(webView)
-        webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
+        webView.loadUrl("https://localhost/assets/www/index.html")
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 webView.evaluateJavascript("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));", null)
