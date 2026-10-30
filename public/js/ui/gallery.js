@@ -6,7 +6,7 @@
 
 import { fetchPosts } from '../api.js';
 import { PullToRefresh } from '../utils/gestures.js';
-import { Haptics } from '../utils/capacitor.js';
+import { Haptics, setImageSrc } from '../utils/capacitor.js';
 import { t } from '../utils/i18n.js';
 
 export class GalleryController {
@@ -255,8 +255,11 @@ export class GalleryController {
 
     // Data saver uses lower-res preview url
     const thumbUrl = this.app.settings.data_saver ? (post.preview_url || post.sample_url) : (post.sample_url || post.preview_url);
-    img.src = thumbUrl;
-    img.onload = () => img.classList.add('loaded');
+    const thumbCandidates = [thumbUrl, post.preview_url, post.sample_url]
+      .filter((u, i, a) => u && a.indexOf(u) === i);
+    setImageSrc(img, thumbCandidates, {
+      onLoad: () => img.classList.add('loaded')
+    });
 
     inner.appendChild(img);
 

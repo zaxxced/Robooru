@@ -14,6 +14,84 @@ export const getPlugins = () => {
   return window.Capacitor?.Plugins || {};
 };
 
+const GELBOORU_REFERER = 'https://gelbooru.com/';
+const IMAGE_MIME = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+  gif: 'image/gif', webp: 'image/webp', avif: 'image/avif'
+};
+
+// Fetch an image through the native HTTP layer (sends a Gelbooru Referer), return a data URL
+const fetchImageAsDataUrl = async (url) => {
+  const plugins = getPlugins();
+  if (!isNative() || !plugins.CapacitorHttp) throw new Error('native http unavailable');
+  const res = await plugins.CapacitorHttp.get({
+    url,
+    responseType: 'blob',
+    headers: {
+      'Referer': GELBOORU_REFERER,
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) BooruBrowser/1.0',
+      'Accept': 'image/*,*/*;q=0.8'
+    }
+  });
+  if (res.status && res.status >= 400) throw new Error(`HTTP ${res.status}`);
+  const ext = (url.split('?')[0].split('.').pop() || '').toLowerCase();
+  return `data:${IMAGE_MIME[ext] || 'image/jpeg'};base64,${res.data}`;
+};
+
+/**
+ * Load an image robustly:
+ * 1) direct load with no Referer (many CDNs block the foreign https://localhost referer)
+ * 2) if that fails on Android, fetch natively with a Gelbooru Referer and show as data URL
+ * 3) if that fails too, try the next URL in the list
+ */
+export const setImageSrc = (img, urls, { onLoad, onFail } = {}) => {
+  const list = (Array.isArray(urls) ? urls : [urls]).filter(Boolean);
+  const token = Symbol('img');
+  img._srcToken = token;
+  const alive = () => img._srcToken === token;
+
+  let idx = 0;
+  let nativeTried = false;
+  img.referrerPolicy = 'no-referrer';
+
+  const tryNextUrl = () => {
+    if (!alive()) return;
+    nativeTried = false;
+    idx++;
+    if (idx < list.length) {
+      img.src = list[idx];
+    } else if (onFail) {
+      onFail();
+    }
+  };
+
+  img.onload = () => {
+    if (alive() && onLoad) onLoad();
+  };
+
+  img.onerror = async () => {
+    if (!alive()) return;
+    const isData = (img.src || '').startsWith('data:');
+    if (!nativeTried && !isData && isNative()) {
+      nativeTried = true;
+      try {
+        const dataUrl = await fetchImageAsDataUrl(list[idx]);
+        if (alive()) img.src = dataUrl;
+        return;
+      } catch (err) {
+        console.warn('Native image fetch failed:', list[idx], err);
+      }
+    }
+    tryNextUrl();
+  };
+
+  if (list.length) {
+    img.src = list[0];
+  } else if (onFail) {
+    onFail();
+  }
+};
+
 // Haptics feedback
 export const Haptics = {
   impact: async (style = 'LIGHT') => {
@@ -152,7 +230,11 @@ export const downloadMedia = async (url, filename, onProgress) => {
       if (plugins.CapacitorHttp) {
         const resp = await plugins.CapacitorHttp.get({
           url: url,
-          responseType: 'blob'
+          responseType: 'blob',
+          headers: {
+            'Referer': GELBOORU_REFERER,
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Mobile) BooruBrowser/1.0'
+          }
         });
         base64Data = resp.data;
       } else {

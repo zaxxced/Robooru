@@ -5,7 +5,7 @@
  */
 
 import { ViewerGestureController } from '../utils/gestures.js';
-import { Haptics, BackButton, shareMedia, downloadMedia } from '../utils/capacitor.js';
+import { Haptics, BackButton, shareMedia, downloadMedia, setImageSrc } from '../utils/capacitor.js';
 import { isFavorite, addFavorite, removeFavorite, addHistory } from '../store.js';
 import { t } from '../utils/i18n.js';
 
@@ -162,10 +162,13 @@ export class ViewerController {
       img.className = 'viewer-image';
       img.alt = post.tags;
       const initialSrc = prefersOriginal ? post.file_url : (post.sample_url || post.file_url);
-      img.src = initialSrc;
-      img.onload = () => {
+      img.dataset.full = initialSrc === post.file_url ? '1' : '0';
+      const candidates = [initialSrc, post.sample_url, post.file_url, post.preview_url]
+        .filter((u, i, a) => u && a.indexOf(u) === i);
+      const hideSpinner = () => {
         if (this.spinnerEl) this.spinnerEl.style.display = 'none';
       };
+      setImageSrc(img, candidates, { onLoad: hideSpinner, onFail: hideSpinner });
       mediaWrapper.appendChild(img);
     }
 
@@ -222,16 +225,22 @@ export class ViewerController {
     if (!post || post.isVideo) return;
 
     const img = this.stageEl.querySelector('.viewer-image');
-    if (img && img.src !== post.file_url) {
+    if (img && img.dataset.full !== '1') {
       Haptics.impact('MEDIUM');
       if (this.spinnerEl) this.spinnerEl.style.display = 'block';
-      img.src = post.file_url;
-      img.onload = () => {
-        if (this.spinnerEl) this.spinnerEl.style.display = 'none';
-        this.btnLoadOriginal.classList.add('loaded');
-        this.btnLoadOriginal.textContent = t('original_loaded');
-        this.app.showToast(t('original_loaded'));
-      };
+      setImageSrc(img, [post.file_url], {
+        onLoad: () => {
+          img.dataset.full = '1';
+          if (this.spinnerEl) this.spinnerEl.style.display = 'none';
+          this.btnLoadOriginal.classList.add('loaded');
+          this.btnLoadOriginal.textContent = t('original_loaded');
+          this.app.showToast(t('original_loaded'));
+        },
+        onFail: () => {
+          if (this.spinnerEl) this.spinnerEl.style.display = 'none';
+          this.app.showToast(t('network_error'));
+        }
+      });
     }
   }
 
