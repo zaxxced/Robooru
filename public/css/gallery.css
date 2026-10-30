@@ -273,3 +273,6 @@
   white-space: nowrap;
 }
 .post-context-menu:active { color: var(--accent-primary); }
+
+/* Keep page controls at the same bottom baseline as the download button. */
+.browse-page-controls { bottom: calc(var(--nav-height) + var(--sab) + 21px) !important; }
