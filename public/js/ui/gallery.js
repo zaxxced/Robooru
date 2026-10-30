@@ -1,12 +1,12 @@
 /**
  * Masonry Gallery Controller
- * Multi-column masonry grid, infinite scroll, pull-to-refresh, skeleton loaders,
+ * Multi-column masonry grid, page navigation, pull-to-refresh, skeleton loaders,
  * lazy image loading, NSFW blur toggle, and blacklist filtering
  */
 
 import { fetchPosts } from '../api.js';
 import { PullToRefresh } from '../utils/gestures.js';
-import { Haptics, setImageSrc } from '../utils/capacitor.js';
+import { Haptics, setImageSrc, downloadMedia } from '../utils/capacitor.js';
 import { t } from '../utils/i18n.js';
 
 export class GalleryController {
@@ -18,6 +18,8 @@ export class GalleryController {
     this.isLoading = false;
     this.hasMore = true;
     this.totalHiddenByBlacklist = 0;
+    this.longPressTimer = null;
+    this.suppressCardClick = false;
 
     this.observer = null;
     this.columnHeights = [];
@@ -31,6 +33,13 @@ export class GalleryController {
     this.infiniteLoader = document.getElementById('browse-loader');
     this.emptyState = document.getElementById('browse-empty');
     this.currentSearchChip = document.getElementById('browse-current-query');
+    this.pagePrev = document.getElementById('browse-page-prev');
+    this.pageNext = document.getElementById('browse-page-next');
+    this.pageLabel = document.getElementById('browse-page-label');
+    this.pageControls = document.getElementById('browse-page-controls');
+
+    this.pagePrev?.addEventListener('click', () => this.goToPage(this.page - 1));
+    this.pageNext?.addEventListener('click', () => this.goToPage(this.page + 1));
 
     // Setup pull-to-refresh
     if (this.scrollContainer && this.ptrContainer) {
@@ -39,31 +48,30 @@ export class GalleryController {
       });
     }
 
-    // Setup IntersectionObserver for infinite scrolling
-    this.setupInfiniteScroll();
+    // Browsing uses explicit pagination instead of endless scrolling.
+    if (this.infiniteLoader) this.infiniteLoader.style.display = 'none';
   }
 
-  setupInfiniteScroll() {
-    if (this.observer) this.observer.disconnect();
 
-    this.observer = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      if (entry.isIntersecting && !this.isLoading && this.hasMore && this.posts.length > 0) {
-        this.loadMore();
+  async loadInitial(tags = '', restoreState = false) {
+    if (restoreState) {
+      try {
+        const savedTags = localStorage.getItem('robooru-browse-tags');
+        const savedPage = Number.parseInt(localStorage.getItem('robooru-browse-page') || '0', 10);
+        this.currentTags = savedTags ?? tags.trim();
+        this.page = Number.isFinite(savedPage) && savedPage >= 0 ? savedPage : 0;
+      } catch {
+        this.currentTags = tags.trim();
+        this.page = 0;
       }
-    }, {
-      root: this.scrollContainer,
-      rootMargin: '400px'
-    });
-
-    if (this.infiniteLoader) {
-      this.observer.observe(this.infiniteLoader);
+    } else {
+      this.currentTags = tags.trim();
+      this.page = 0;
+      try {
+        localStorage.setItem('robooru-browse-tags', this.currentTags);
+        localStorage.setItem('robooru-browse-page', '0');
+      } catch {}
     }
-  }
-
-  async loadInitial(tags = '') {
-    this.currentTags = tags.trim();
-    this.page = 0;
     this.posts = [];
     this.hasMore = true;
     this.totalHiddenByBlacklist = 0;
@@ -94,16 +102,22 @@ export class GalleryController {
   }
 
   async refresh() {
-    this.page = 0;
     this.posts = [];
     this.hasMore = true;
     this.totalHiddenByBlacklist = 0;
+    if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
     await this.fetchBatch();
   }
 
-  async loadMore() {
-    if (this.isLoading || !this.hasMore) return false;
-    this.page++;
+  async goToPage(targetPage) {
+    if (this.isLoading || targetPage < 0 || targetPage === this.page) return false;
+    if (targetPage > this.page && !this.hasMore) return false;
+    this.page = targetPage;
+    try { localStorage.setItem('robooru-browse-page', String(this.page)); } catch {}
+    this.posts = [];
+    this.totalHiddenByBlacklist = 0;
+    this.renderSkeletons();
+    if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
     return await this.fetchBatch();
   }
 
@@ -122,22 +136,19 @@ export class GalleryController {
         blacklist: this.app.settings.blacklist
       });
 
-      if (this.page === 0) {
-        this.posts = res.posts;
-        this.renderGrid(true);
-      } else {
-        const startIdx = this.posts.length;
-        this.posts = this.posts.concat(res.posts);
-        this.appendPostsToGrid(res.posts, startIdx);
-      }
+      // Replace the whole grid on every page so old skeleton cards cannot remain.
+      this.posts = res.posts;
+      this.renderGrid(true);
 
       this.totalHiddenByBlacklist += res.hiddenByBlacklist;
       this.updateBlacklistBanner();
 
-      if (res.posts.length < 20) {
-        this.hasMore = false;
-        if (this.infiniteLoader) this.infiniteLoader.style.display = 'none';
-      }
+      this.hasMore = res.totalCount > 0
+        ? ((this.page + 1) * 40 < res.totalCount)
+        : res.posts.length >= 20;
+      try { localStorage.setItem('robooru-browse-page', String(this.page)); } catch {}
+      if (this.infiniteLoader) this.infiniteLoader.style.display = 'none';
+      this.updatePageControls();
 
       // Check empty state
       if (this.posts.length === 0) {
@@ -151,13 +162,56 @@ export class GalleryController {
       console.error('Fetch posts error:', err);
       this.app.showToast(t('network_error'));
       this.hasMore = false;
+      this.updatePageControls();
       return false;
     } finally {
       this.isLoading = false;
-      if (!this.hasMore && this.infiniteLoader) {
-        this.infiniteLoader.style.display = 'none';
-      }
+      if (this.infiniteLoader) this.infiniteLoader.style.display = 'none';
+      this.updatePageControls();
     }
+  }
+
+  updatePageControls() {
+    if (this.pageLabel) this.pageLabel.textContent = `Page ${this.page + 1}`;
+    if (this.pagePrev) this.pagePrev.disabled = this.page === 0 || this.isLoading;
+    if (this.pageNext) this.pageNext.disabled = !this.hasMore || this.isLoading;
+    if (this.pageControls) this.pageControls.style.display = 'flex';
+  }
+
+  downloadPost(post) {
+    const filename = `gelbooru_${post.id}.${post.fileType || 'jpg'}`;
+    const downloadId = this.app.downloads?.start(filename);
+    downloadMedia(post.file_url, filename, (percent, message, status) => {
+      if (downloadId != null) this.app.downloads?.update(downloadId, percent, message, status);
+    }).then(success => {
+      if (!success && downloadId != null) this.app.downloads?.update(downloadId, 0, 'Download failed', 'failed');
+    }).catch(() => {
+      if (downloadId != null) this.app.downloads?.update(downloadId, 0, 'Download failed', 'failed');
+      this.app.showToast('Download failed');
+    });
+  }
+
+  showPostContextMenu(post, x, y) {
+    document.querySelector('.post-context-menu')?.remove();
+    const menu = document.createElement('button');
+    menu.type = 'button';
+    menu.className = 'post-context-menu';
+    menu.textContent = '⬇  Unduh gambar ini';
+    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - 190))}px`;
+    menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - 58))}px`;
+    menu.addEventListener('click', (event) => {
+      event.stopPropagation();
+      menu.remove();
+      this.downloadPost(post);
+    });
+    document.body.appendChild(menu);
+    const dismiss = (event) => {
+      if (!menu.contains(event.target)) {
+        menu.remove();
+        document.removeEventListener('pointerdown', dismiss, true);
+      }
+    };
+    setTimeout(() => document.addEventListener('pointerdown', dismiss, true), 0);
   }
 
   renderSkeletons() {
@@ -316,8 +370,47 @@ export class GalleryController {
 
     card.appendChild(inner);
 
-    // Tap card to open fullscreen viewer
-    card.addEventListener('click', () => {
+    // Long-press a thumbnail to offer a full-resolution download.
+    let pressX = 0;
+    let pressY = 0;
+    let longPressTriggered = false;
+    const clearPress = () => {
+      if (this.longPressTimer) clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    };
+    card.addEventListener('pointerdown', (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      pressX = event.clientX;
+      pressY = event.clientY;
+      longPressTriggered = false;
+      clearPress();
+      this.longPressTimer = setTimeout(() => {
+        longPressTriggered = true;
+        this.suppressCardClick = true;
+        Haptics.selection();
+        this.showPostContextMenu(post, pressX, pressY);
+      }, 550);
+    });
+    card.addEventListener('pointermove', (event) => {
+      if (Math.abs(event.clientX - pressX) > 12 || Math.abs(event.clientY - pressY) > 12) clearPress();
+    });
+    card.addEventListener('pointerup', clearPress);
+    card.addEventListener('pointercancel', clearPress);
+    card.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      this.suppressCardClick = true;
+      this.showPostContextMenu(post, event.clientX, event.clientY);
+    });
+
+    // Tap card to open fullscreen viewer; suppress the tap after a long-press.
+    card.addEventListener('click', (event) => {
+      if (this.suppressCardClick || longPressTriggered) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.suppressCardClick = false;
+        longPressTriggered = false;
+        return;
+      }
       Haptics.selection();
       this.app.viewer.open(this.posts, index);
     });

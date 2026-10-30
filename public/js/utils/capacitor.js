@@ -221,10 +221,26 @@ export const downloadMedia = async (url, filename, onProgress) => {
     // Preferred on Android: hand the file to the system DownloadManager (see native/MainActivity.java).
     // It streams natively, shows a notification, and saves into Pictures/Booru.
     if (isNative() && window.BooruNative && typeof window.BooruNative.download === 'function') {
-      if (onProgress) onProgress(50, 'Starting download...');
-      if (window.BooruNative.download(url, filename)) {
-        if (onProgress) onProgress(100, 'Saving to Pictures/Booru (see notification)');
-        return true;
+      const downloadId = window.BooruNative.download(url, filename);
+      if (downloadId > 0) {
+        if (onProgress) onProgress(0, 'Waiting for download…');
+        for (;;) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const parts = String(window.BooruNative.downloadProgress(downloadId) || 'active,0,0').split(',');
+          const status = parts[0];
+          const downloaded = Number(parts[1]) || 0;
+          const total = Number(parts[2]) || 0;
+          const percent = total > 0 ? Math.min(99, Math.floor(downloaded / total * 100)) : 0;
+          if (status === 'complete') {
+            if (onProgress) onProgress(100, 'Saved to Pictures/Booru', 'complete');
+            return true;
+          }
+          if (status === 'failed') {
+            if (onProgress) onProgress(0, 'Download failed', 'failed');
+            return false;
+          }
+          if (onProgress) onProgress(percent, total > 0 ? 'Downloading…' : 'Downloading…');
+        }
       }
     }
 
@@ -271,12 +287,30 @@ export const downloadMedia = async (url, filename, onProgress) => {
       return true;
     }
 
-    // Web Fallback: Fetch blob and trigger download attribute
-    if (onProgress) onProgress(40, 'Downloading file...');
+    // Web fallback with real progress when the response exposes a content length.
+    if (onProgress) onProgress(0, 'Connecting…');
     const response = await fetch(url, { mode: 'cors' });
-    const blob = await response.blob();
+    if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+    const total = Number(response.headers.get('content-length')) || 0;
+    let blob;
+    if (response.body && response.body.getReader) {
+      const reader = response.body.getReader();
+      const chunks = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (onProgress) onProgress(total > 0 ? Math.min(99, Math.floor(received / total * 100)) : 0, 'Downloading…');
+      }
+      blob = new Blob(chunks, { type: response.headers.get('content-type') || 'application/octet-stream' });
+    } else {
+      blob = await response.blob();
+      if (onProgress) onProgress(90, 'Saving file…');
+    }
     
-    if (onProgress) onProgress(85, 'Saving file...');
+    if (onProgress) onProgress(99, 'Saving file…');
     const objectUrl = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = objectUrl;
@@ -286,7 +320,7 @@ export const downloadMedia = async (url, filename, onProgress) => {
     document.body.removeChild(link);
     setTimeout(() => window.URL.revokeObjectURL(objectUrl), 15000);
 
-    if (onProgress) onProgress(100, 'Download complete!');
+    if (onProgress) onProgress(100, 'Download complete!', 'complete');
     return true;
   } catch (err) {
     console.error('Download error:', err);
@@ -296,7 +330,7 @@ export const downloadMedia = async (url, filename, onProgress) => {
     a.target = '_blank';
     a.download = filename;
     a.click();
-    if (onProgress) onProgress(100, 'Opened link in browser');
+    if (onProgress) onProgress(100, 'Opened link in browser', 'complete');
     return true;
   }
 };

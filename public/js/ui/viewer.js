@@ -283,11 +283,21 @@ export class ViewerController {
     const ext = post.fileType || 'jpg';
     const filename = `gelbooru_${post.id}.${ext}`;
     
-    this.app.showDownloadBubble(15, t('download_starting'));
-
-    await downloadMedia(post.file_url, filename, (percent, msg) => {
-      this.app.showDownloadBubble(percent, msg);
+    const downloadId = this.app.downloads?.start(filename, {
+      post,
+      thumb: post.preview_url || post.sample_url || ''
     });
+    try {
+      const success = await downloadMedia(post.file_url, filename, (percent, msg, status) => {
+        if (downloadId != null) this.app.downloads?.update(downloadId, percent, msg, status);
+      });
+      if (!success && downloadId != null) {
+        this.app.downloads?.update(downloadId, 0, 'Download failed', 'failed');
+      }
+    } catch (error) {
+      if (downloadId != null) this.app.downloads?.update(downloadId, 0, 'Download failed', 'failed');
+      this.app.showToast('Download failed');
+    }
   }
 
   toggleUI() {

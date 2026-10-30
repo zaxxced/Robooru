@@ -12,14 +12,13 @@ import { ViewerController } from './ui/viewer.js';
 import { GalleryController } from './ui/gallery.js';
 import { SearchController } from './ui/search.js';
 import { FavoritesController } from './ui/favorites.js';
-import { HistoryController } from './ui/history.js';
 import { SettingsController } from './ui/settings.js';
+import { DownloadsController } from './ui/downloads.js';
 
 class App {
   constructor() {
     this.currentTab = 'browse';
     this.settings = {};
-    this.downloadBubbleTimeout = null;
   }
 
   async init() {
@@ -49,8 +48,8 @@ class App {
     this.gallery = new GalleryController(this);
     this.search = new SearchController(this);
     this.favorites = new FavoritesController(this);
-    this.history = new HistoryController(this);
     this.settingsController = new SettingsController(this);
+    this.downloads = new DownloadsController();
 
     // 6. Initialize Controller DOM Listeners
     this.gate.init();
@@ -59,8 +58,8 @@ class App {
     this.gallery.init();
     this.search.init();
     this.favorites.init();
-    this.history.init();
     this.settingsController.init();
+    this.downloads.init();
 
     // 7. Setup Navigation Tabs
     this.setupNav();
@@ -70,7 +69,7 @@ class App {
     this.gate.checkPinLock();
 
     // 9. Initial Feed Load
-    this.gallery.loadInitial();
+    this.gallery.loadInitial('', true);
 
     // 10. Update i18n in DOM
     applyI18nToDOM();
@@ -125,7 +124,7 @@ class App {
     } else if (tabName === 'favorites') {
       this.favorites.activate();
     } else if (tabName === 'history') {
-      this.history.activate();
+      this.downloads.activate();
     } else if (tabName === 'browse' && this.gallery.posts.length === 0) {
       this.gallery.loadInitial();
     }
@@ -158,22 +157,6 @@ class App {
     }, 2800);
   }
 
-  showDownloadBubble(percent, message) {
-    const bubble = document.getElementById('download-bubble');
-    const textEl = document.getElementById('download-bubble-text');
-    if (!bubble || !textEl) return;
-
-    clearTimeout(this.downloadBubbleTimeout);
-    textEl.textContent = `${message} (${percent}%)`;
-    bubble.classList.add('show');
-
-    if (percent >= 100) {
-      textEl.textContent = message;
-      this.downloadBubbleTimeout = setTimeout(() => {
-        bubble.classList.remove('show');
-      }, 3500);
-    }
-  }
 }
 
 // Instantiate and start app
