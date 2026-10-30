@@ -86,6 +86,7 @@ export class DownloadsController {
     item.message = message || item.message;
     if (status) item.status = status;
     else if (item.percent >= 100) item.status = 'complete';
+    if (item.status === 'complete' && !item.completedAt) item.completedAt = Date.now();
     this.save();
     this.render();
     this.renderHistory();
