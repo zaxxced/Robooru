@@ -301,8 +301,15 @@ export class GalleryController {
     const img = document.createElement('img');
     img.className = 'post-thumb';
     img.alt = post.tags;
-    img.loading = 'lazy';
-    img.decoding = 'async';
+    // Prioritize the first visible cards; let the rest load as the user scrolls.
+    // This avoids starting all thumbnail requests at once on slower Android connections.
+    img.loading = index < (parseInt(this.app.settings.grid_columns, 10) || 2) * 2
+      ? 'eager'
+      : 'lazy';
+    img.decoding = 'auto';
+    if (index < (parseInt(this.app.settings.grid_columns, 10) || 2) * 2) {
+      img.fetchPriority = 'high';
+    }
     img.style.position = 'absolute';
     img.style.top = '0';
     img.style.left = '0';
