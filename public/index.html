@@ -68,10 +68,19 @@
               <div class="empty-state-desc" data-i18n="no_results_desc">Try searching with different tags or check your blacklist.</div>
             </div>
 
-            <!-- Infinite Scroll Loader -->
-            <div id="browse-loader" class="infinite-loader">
+            <!-- Kept as a hidden compatibility element; navigation is paginated now. -->
+            <div id="browse-loader" class="infinite-loader" style="display:none;">
               <div class="infinite-spinner"></div>
             </div>
+          </div>
+          <div id="browse-page-controls" class="browse-page-controls" aria-label="Gallery pages">
+            <button id="browse-page-prev" class="browse-page-button" type="button" aria-label="Previous page" title="Previous page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span id="browse-page-label" class="browse-page-label">Page 1</span>
+            <button id="browse-page-next" class="browse-page-button" type="button" aria-label="Next page" title="Next page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
           </div>
         </section>
 
