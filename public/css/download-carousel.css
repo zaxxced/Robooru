@@ -1,6 +1,9 @@
 /* History tab: recent downloads carousel (horizontal swipe) */
 .dl-carousel {
-  margin-bottom: 22px;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 22px;
 }
 
 .dl-carousel-title {
@@ -13,13 +16,24 @@
 
 .dl-carousel-list {
   display: flex;
+  flex-flow: row nowrap;
+  align-items: stretch;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  scrollbar-width: none;
   padding: 2px 2px 8px;
   margin: 0 -2px;
+  box-sizing: border-box;
 }
 
 .dl-carousel-list::-webkit-scrollbar {
@@ -28,8 +42,10 @@
 
 .dl-card {
   position: relative;
-  /* Two big cards visible at a time (Mori-style), the rest swipes sideways */
-  flex: 0 0 calc((100% - 10px) / 2);
+  display: block;
+  flex: 0 0 calc(50% - 5px);
+  min-width: 0;
+  box-sizing: border-box;
   aspect-ratio: 3 / 4;
   padding: 0;
   border: 1px solid var(--border-subtle);
@@ -46,14 +62,38 @@
   transform: scale(0.97);
 }
 
+.dl-card.skeleton {
+  background: var(--bg-surface-elevated);
+}
+
+.dl-card.skeleton::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.055) 42%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(255, 255, 255, 0.055) 58%,
+    transparent 75%
+  );
+  background-size: 220% 100%;
+  animation: dl-carousel-shimmer 1.35s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .dl-card-img {
   position: absolute;
+  z-index: 0;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   opacity: 0;
   transition: opacity 0.3s ease;
+  pointer-events: none;
 }
 
 .dl-card-img.loaded {
@@ -71,10 +111,13 @@
 
 .dl-card.failed::before {
   content: '!';
+  position: relative;
+  z-index: 2;
 }
 
 .dl-card-label {
   position: absolute;
+  z-index: 2;
   left: 6px;
   bottom: 6px;
   padding: 2px 7px;
@@ -83,11 +126,21 @@
   color: #ffffff;
   font-size: 0.68rem;
   font-weight: 700;
+  pointer-events: none;
+}
+
+@keyframes dl-carousel-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -120% 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dl-card,
   .dl-card-img {
     transition: none;
+  }
+
+  .dl-card.skeleton::before {
+    animation: none;
   }
 }
