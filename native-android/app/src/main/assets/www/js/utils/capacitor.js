@@ -239,7 +239,10 @@ export const downloadMedia = async (url, filename, onProgress) => {
           const total = Number(parts[2]) || 0;
           const percent = total > 0 ? Math.min(99, Math.floor(downloaded / total * 100)) : 0;
           if (status === 'complete') {
-            if (onProgress) onProgress(100, 'Saved to Pictures/Booru', 'complete');
+            const localUrl = window.BooruNative.getDownloadedFileUrl
+              ? window.BooruNative.getDownloadedFileUrl(downloadId)
+              : '';
+            if (onProgress) onProgress(100, 'Saved to Pictures/Booru', 'complete', localUrl || '');
             return true;
           }
           if (status === 'failed') {
