@@ -1,6 +1,6 @@
 /**
  * Masonry Gallery Controller
- * Multi-column masonry grid, infinite scroll, pull-to-refresh, skeleton loaders,
+ * Multi-column masonry grid, page navigation, pull-to-refresh, skeleton loaders,
  * lazy image loading, NSFW blur toggle, and blacklist filtering
  */
 
@@ -52,23 +52,6 @@ export class GalleryController {
     if (this.infiniteLoader) this.infiniteLoader.style.display = 'none';
   }
 
-  setupInfiniteScroll() {
-    if (this.observer) this.observer.disconnect();
-
-    this.observer = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      if (entry.isIntersecting && !this.isLoading && this.hasMore && this.posts.length > 0) {
-        this.loadMore();
-      }
-    }, {
-      root: this.scrollContainer,
-      rootMargin: '400px'
-    });
-
-    if (this.infiniteLoader) {
-      this.observer.observe(this.infiniteLoader);
-    }
-  }
 
   async loadInitial(tags = '') {
     this.currentTags = tags.trim();
