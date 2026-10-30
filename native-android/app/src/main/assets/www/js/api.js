@@ -111,14 +111,16 @@ export const fetchPosts = async ({
   limit = 40,
   apiKey = '',
   userId = '',
-  ratingFilter = 'standard',
+  ratingFilter = 'all', // 'all' | 'general' | 'sensitive' | 'questionable' | 'explicit'
   blacklist = []
 }) => {
-  // Construct search query
-  // Android build keeps browsing restricted to general-rated posts.
-  let finalTags = tags.trim().replace(/\brating:(?:sensitive|questionable|explicit)\b/gi, '').replace(/\s+/g, ' ').trim();
-  if (!/\brating:general\b/i.test(finalTags)) {
-    finalTags = finalTags ? `${finalTags} rating:general` : 'rating:general';
+  // Normalize tag input
+  let finalTags = tags.trim().replace(/\s+/g, ' ').trim();
+
+  // Jika user tidak mengetik rating sendiri di pencarian, pakai pengaturan
+  const hasRatingTag = /\brating:\w+\b/i.test(finalTags);
+  if (!hasRatingTag && ratingFilter && ratingFilter !== 'all') {
+    finalTags = finalTags ? `${finalTags} rating:${ratingFilter}` : `rating:${ratingFilter}`;
   }
 
   let endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=post&q=index&json=1&pid=${page}&limit=${limit}`;
@@ -130,13 +132,13 @@ export const fetchPosts = async ({
   }
 
   // Check memory cache
-  const cacheKey = `posts_${finalTags}_${page}_${limit}`;
+  const cacheKey = `posts_${finalTags}_${page}_${limit}_${apiKey ? 'auth' : 'anon'}`;
   if (memoryCache.has(cacheKey)) {
     return memoryCache.get(cacheKey);
   }
 
   const data = await httpGet(endpoint);
-  
+
   // Gelbooru returns { "@attributes": { count, limit, offset }, "post": [...] }
   let rawPosts = [];
   let totalCount = 0;
@@ -154,9 +156,6 @@ export const fetchPosts = async ({
 
   // Normalize post format
   let posts = rawPosts.map(p => normalizePost(p));
-
-  // Apply Rating Filter
-  posts = posts.filter(p => p.rating === 'general' || p.rating === 'g');
 
   // Apply Blacklist
   let hiddenByBlacklist = 0;
