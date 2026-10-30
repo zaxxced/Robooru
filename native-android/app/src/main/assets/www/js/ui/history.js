@@ -45,7 +45,7 @@ export class HistoryController {
         .map(item => ({
           id: item.post.id,
           viewed_at: item.completedAt || item.createdAt || Date.now(),
-          post: item.post,
+          post: { ...item.post, local_file_url: item.localUrl || '' },
           downloaded: true
         }));
     } catch {
@@ -77,7 +77,7 @@ export class HistoryController {
 
     this.historyList.innerHTML = this.historyItems.map((item, idx) => {
       const p = item.post || {};
-      const preview = p.preview_url || p.sample_url || p.file_url || '';
+      const preview = p.local_file_url || p.preview_url || p.sample_url || p.file_url || '';
       const sample = p.sample_url || p.file_url || '';
       const original = p.file_url || '';
       const dateStr = new Date(item.viewed_at).toLocaleString([], {
