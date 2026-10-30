@@ -33,6 +33,7 @@ export class DownloadsController {
     this.isOpen = false;
     this.historyList = null;
     this.emptyState = null;
+    this.suppressCarouselClickUntil = 0;
   }
 
   init() {
@@ -43,6 +44,7 @@ export class DownloadsController {
     this.closeButton = document.getElementById('download-popup-close');
     this.historyList = document.getElementById('downloads-history-list');
     this.emptyState = document.getElementById('downloads-history-empty');
+    this.bindCarouselGestures();
     try { this.items = JSON.parse(localStorage.getItem('robooru-download-history') || '[]'); } catch { this.items = []; }
     this.items = this.items.slice(0, 100);
     this.nextId = this.items.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
@@ -57,6 +59,50 @@ export class DownloadsController {
     });
     this.render();
     this.renderHistory();
+  }
+
+  bindCarouselGestures() {
+    const list = document.getElementById('dl-carousel-list');
+    if (!list || list.dataset.swipeBound === 'true') return;
+    list.dataset.swipeBound = 'true';
+
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let horizontalSwipe = false;
+
+    list.addEventListener('touchstart', (event) => {
+      if (event.touches.length !== 1) return;
+      startX = lastX = event.touches[0].clientX;
+      startY = event.touches[0].clientY;
+      horizontalSwipe = false;
+    }, { passive: true });
+
+    list.addEventListener('touchmove', (event) => {
+      if (event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      const totalX = touch.clientX - startX;
+      const totalY = touch.clientY - startY;
+
+      // Lock only after the user's intent is clearly horizontal.
+      if (!horizontalSwipe && Math.abs(totalX) > 8 && Math.abs(totalX) > Math.abs(totalY) * 1.15) {
+        horizontalSwipe = true;
+      }
+
+      if (horizontalSwipe) {
+        if (event.cancelable) event.preventDefault();
+        list.scrollLeft -= touch.clientX - lastX;
+        this.suppressCarouselClickUntil = Date.now() + 350;
+      }
+      lastX = touch.clientX;
+    }, { passive: false });
+
+    const reset = () => {
+      horizontalSwipe = false;
+      startX = startY = lastX = 0;
+    };
+    list.addEventListener('touchend', reset, { passive: true });
+    list.addEventListener('touchcancel', reset, { passive: true });
   }
 
   start(filename, meta = {}) {
@@ -153,6 +199,7 @@ export class DownloadsController {
       });
 
       card.addEventListener('click', () => {
+        if (Date.now() < this.suppressCarouselClickUntil) return;
         const posts = entries.map(e => e.post);
         window.app?.viewer?.open(posts, idx);
       });
