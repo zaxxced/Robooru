@@ -184,8 +184,8 @@ export class GalleryController {
       post,
       thumb: post.preview_url || post.sample_url || post.file_url
     });
-    downloadMedia(post.file_url, filename, (percent, message, status) => {
-      if (downloadId != null) this.app.downloads?.update(downloadId, percent, message, status);
+    downloadMedia(post.file_url, filename, (percent, message, status, localUrl) => {
+      if (downloadId != null) this.app.downloads?.update(downloadId, percent, message, status, localUrl);
     }).then(success => {
       if (!success && downloadId != null) this.app.downloads?.update(downloadId, 0, 'Download failed', 'failed');
     }).catch(() => {
