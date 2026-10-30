@@ -28,7 +28,8 @@
 
 .dl-card {
   position: relative;
-  flex: 0 0 118px;
+  /* Two big cards visible at a time (Mori-style), the rest swipes sideways */
+  flex: 0 0 calc((100% - 10px) / 2);
   aspect-ratio: 3 / 4;
   padding: 0;
   border: 1px solid var(--border-subtle);

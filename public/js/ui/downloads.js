@@ -139,7 +139,8 @@ export class DownloadsController {
       card.append(img, label);
       list.appendChild(card);
 
-      const candidates = [item.thumb, item.post.preview_url, item.post.sample_url].filter(Boolean);
+      // Sample first: the cards are large, so the small preview would look blurry
+      const candidates = [item.post.sample_url, item.post.preview_url, item.thumb].filter(Boolean);
       setImageSrc(img, [...new Set(candidates)], {
         onLoad: () => {
           card.classList.remove('skeleton');
