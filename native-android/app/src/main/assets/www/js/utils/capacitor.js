@@ -171,6 +171,8 @@ export const BackButton = {
     const plugins = getPlugins();
     if (plugins.App && !canGoBack) {
       plugins.App.exitApp();
+    } else if (isNative() && !canGoBack && window.BooruNative?.exitApp) {
+      window.BooruNative.exitApp();
     }
   }
 };
@@ -182,6 +184,8 @@ export const setStatusBarTheme = async (isDark = true, color = '#12141a') => {
     if (plugins.StatusBar) {
       await plugins.StatusBar.setStyle({ style: isDark ? 'DARK' : 'LIGHT' });
       await plugins.StatusBar.setBackgroundColor({ color });
+    } else if (isNative() && window.BooruNative?.setStatusBarColor) {
+      window.BooruNative.setStatusBarColor(color, !isDark);
     }
   } catch {
     // Web fallback ignored
