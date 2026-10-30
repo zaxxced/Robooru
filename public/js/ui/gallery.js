@@ -180,7 +180,10 @@ export class GalleryController {
 
   downloadPost(post) {
     const filename = `gelbooru_${post.id}.${post.fileType || 'jpg'}`;
-    const downloadId = this.app.downloads?.start(filename);
+    const downloadId = this.app.downloads?.start(filename, {
+      post,
+      thumb: post.preview_url || post.sample_url || ''
+    });
     downloadMedia(post.file_url, filename, (percent, message, status) => {
       if (downloadId != null) this.app.downloads?.update(downloadId, percent, message, status);
     }).then(success => {
