@@ -1,0 +1,126 @@
+:root {
+  /* Default Dark Theme */
+  --bg-main: #12141a;
+  --bg-surface: #1a1d26;
+  --bg-surface-elevated: #232734;
+  --bg-card: #1e222e;
+  --bg-glass: rgba(26, 29, 38, 0.85);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Accent Color (Default Cyan-Indigo) */
+  --accent-primary: #6366f1;
+  --accent-hover: #4f46e5;
+  --accent-glow: rgba(99, 102, 241, 0.25);
+  --accent-text: #ffffff;
+
+  /* Tag Categories (Standard Gelbooru Palette) */
+  --tag-general: #38bdf8;
+  --tag-general-bg: rgba(56, 189, 248, 0.12);
+  --tag-artist: #fb7185;
+  --tag-artist-bg: rgba(251, 113, 133, 0.12);
+  --tag-copyright: #c084fc;
+  --tag-copyright-bg: rgba(192, 132, 252, 0.12);
+  --tag-character: #34d399;
+  --tag-character-bg: rgba(52, 211, 153, 0.12);
+  --tag-metadata: #fbbf24;
+  --tag-metadata-bg: rgba(251, 191, 36, 0.12);
+
+  /* Rating Badges */
+  --rating-general: #10b981;
+  --rating-sensitive: #3b82f6;
+  --rating-questionable: #f59e0b;
+  --rating-explicit: #ef4444;
+
+  /* Safe Area Insets for Android Display Notch and Gesture Nav */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+
+  /* Layout Measurements */
+  --nav-height: 64px;
+  --header-height: 56px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* Timing */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 350ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* AMOLED Pitch Black Theme */
+[data-theme="amoled"] {
+  --bg-main: #000000;
+  --bg-surface: #0a0a0c;
+  --bg-surface-elevated: #121216;
+  --bg-card: #0e0e12;
+  --bg-glass: rgba(0, 0, 0, 0.9);
+  --border-subtle: #1f1f26;
+  --border-strong: #2f2f3a;
+
+  --text-primary: #ffffff;
+  --text-secondary: #8c909a;
+  --text-muted: #555760;
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  --bg-main: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-surface-elevated: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  --accent-glow: rgba(99, 102, 241, 0.15);
+}
+
+/* Accent Color Variations */
+[data-accent="violet"] {
+  --accent-primary: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --accent-glow: rgba(139, 92, 246, 0.25);
+}
+
+[data-accent="cyan"] {
+  --accent-primary: #06b6d4;
+  --accent-hover: #0891b2;
+  --accent-glow: rgba(6, 182, 212, 0.25);
+}
+
+[data-accent="emerald"] {
+  --accent-primary: #10b981;
+  --accent-hover: #059669;
+  --accent-glow: rgba(16, 185, 129, 0.25);
+}
+
+[data-accent="rose"] {
+  --accent-primary: #f43f5e;
+  --accent-hover: #e11d48;
+  --accent-glow: rgba(244, 63, 94, 0.25);
+}
+
+[data-accent="amber"] {
+  --accent-primary: #f59e0b;
+  --accent-hover: #d97706;
+  --accent-glow: rgba(245, 158, 11, 0.25);
+}
+
+[data-accent="blue"] {
+  --accent-primary: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-glow: rgba(59, 130, 246, 0.25);
+}

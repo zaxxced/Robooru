@@ -1,0 +1,93 @@
+/* History tab: recent downloads carousel (horizontal swipe) */
+.dl-carousel {
+  margin-bottom: 22px;
+}
+
+.dl-carousel-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.dl-carousel-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 2px 8px;
+  margin: 0 -2px;
+}
+
+.dl-carousel-list::-webkit-scrollbar {
+  display: none;
+}
+
+.dl-card {
+  position: relative;
+  /* Two big cards visible at a time (Mori-style), the rest swipes sideways */
+  flex: 0 0 calc((100% - 10px) / 2);
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  overflow: hidden;
+  background-color: var(--bg-surface-elevated);
+  scroll-snap-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease;
+}
+
+.dl-card:active {
+  transform: scale(0.97);
+}
+
+.dl-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dl-card-img.loaded {
+  opacity: 1;
+}
+
+.dl-card.failed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.dl-card.failed::before {
+  content: '!';
+}
+
+.dl-card-label {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dl-card,
+  .dl-card-img {
+    transition: none;
+  }
+}
