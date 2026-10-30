@@ -53,9 +53,25 @@ export class GalleryController {
   }
 
 
-  async loadInitial(tags = '') {
-    this.currentTags = tags.trim();
-    this.page = 0;
+  async loadInitial(tags = '', restoreState = false) {
+    if (restoreState) {
+      try {
+        const savedTags = localStorage.getItem('robooru-browse-tags');
+        const savedPage = Number.parseInt(localStorage.getItem('robooru-browse-page') || '0', 10);
+        this.currentTags = savedTags ?? tags.trim();
+        this.page = Number.isFinite(savedPage) && savedPage >= 0 ? savedPage : 0;
+      } catch {
+        this.currentTags = tags.trim();
+        this.page = 0;
+      }
+    } else {
+      this.currentTags = tags.trim();
+      this.page = 0;
+      try {
+        localStorage.setItem('robooru-browse-tags', this.currentTags);
+        localStorage.setItem('robooru-browse-page', '0');
+      } catch {}
+    }
     this.posts = [];
     this.hasMore = true;
     this.totalHiddenByBlacklist = 0;
@@ -86,7 +102,6 @@ export class GalleryController {
   }
 
   async refresh() {
-    this.page = 0;
     this.posts = [];
     this.hasMore = true;
     this.totalHiddenByBlacklist = 0;
@@ -98,6 +113,7 @@ export class GalleryController {
     if (this.isLoading || targetPage < 0 || targetPage === this.page) return false;
     if (targetPage > this.page && !this.hasMore) return false;
     this.page = targetPage;
+    try { localStorage.setItem('robooru-browse-page', String(this.page)); } catch {}
     this.posts = [];
     this.totalHiddenByBlacklist = 0;
     this.renderSkeletons();
@@ -120,14 +136,9 @@ export class GalleryController {
         blacklist: this.app.settings.blacklist
       });
 
-      if (this.page === 0) {
-        this.posts = res.posts;
-        this.renderGrid(true);
-      } else {
-        const startIdx = this.posts.length;
-        this.posts = this.posts.concat(res.posts);
-        this.appendPostsToGrid(res.posts, startIdx);
-      }
+      // Replace the whole grid on every page so old skeleton cards cannot remain.
+      this.posts = res.posts;
+      this.renderGrid(true);
 
       this.totalHiddenByBlacklist += res.hiddenByBlacklist;
       this.updateBlacklistBanner();
@@ -135,6 +146,7 @@ export class GalleryController {
       this.hasMore = res.totalCount > 0
         ? ((this.page + 1) * 40 < res.totalCount)
         : res.posts.length >= 20;
+      try { localStorage.setItem('robooru-browse-page', String(this.page)); } catch {}
       if (this.infiniteLoader) this.infiniteLoader.style.display = 'none';
       this.updatePageControls();
 
