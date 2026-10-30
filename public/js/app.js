@@ -72,7 +72,7 @@ class App {
     this.gate.checkPinLock();
 
     // 9. Initial Feed Load
-    this.gallery.loadInitial();
+    this.gallery.loadInitial('', true);
 
     // 10. Update i18n in DOM
     applyI18nToDOM();
