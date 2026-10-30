@@ -37,8 +37,30 @@ export class HistoryController {
   }
 
   async loadHistory() {
-    const raw = await getHistory();
-    this.historyItems = raw;
+    const viewed = await getHistory();
+    let downloaded = [];
+    try {
+      downloaded = JSON.parse(localStorage.getItem('robooru-download-history') || '[]')
+        .filter(item => item.status === 'complete' && item.post)
+        .map(item => ({
+          id: item.post.id,
+          viewed_at: item.completedAt || item.createdAt || Date.now(),
+          post: item.post,
+          downloaded: true
+        }));
+    } catch {
+      downloaded = [];
+    }
+
+    // Merge by post ID and show the newest activity first.
+    const merged = new Map();
+    [...viewed, ...downloaded].forEach(item => {
+      const key = String(item.post?.id ?? item.id);
+      const previous = merged.get(key);
+      if (!previous || Number(item.viewed_at) > Number(previous.viewed_at)) merged.set(key, item);
+    });
+    this.historyItems = [...merged.values()]
+      .sort((a, b) => Number(b.viewed_at) - Number(a.viewed_at));
 
     if (this.historyItems.length === 0) {
       if (this.emptyState) this.emptyState.style.display = 'flex';
@@ -58,7 +80,7 @@ export class HistoryController {
       const preview = p.preview_url || p.sample_url || p.file_url || '';
       const sample = p.sample_url || p.file_url || '';
       const original = p.file_url || '';
-      const dateStr = new Date(item.viewed_at).toLocaleTimeString([], {
+      const dateStr = new Date(item.viewed_at).toLocaleString([], {
         hour: '2-digit',
         minute: '2-digit'
       });
