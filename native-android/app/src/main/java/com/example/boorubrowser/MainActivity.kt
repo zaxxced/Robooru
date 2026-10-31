@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.os.ParcelFileDescriptor
 import android.view.View
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
@@ -20,12 +21,21 @@ import androidx.webkit.WebViewAssetLoader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.HashMap
+import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var assetLoader: WebViewAssetLoader
     private val referer = "https://gelbooru.com/"
     private val userAgent = "Mozilla/5.0 (Linux; Android 14; Mobile) BooruBrowser/2.1"
+
+    // Images are fetched on this small pool and streamed back as they arrive, so a slow or stuck
+    // image never blocks the WebView's request thread and the rest of the grid can show up top to bottom.
+    private val imagePool = Executors.newFixedThreadPool(6)
+    private val imageMimeByExt = mapOf(
+        "jpg" to "image/jpeg", "jpeg" to "image/jpeg", "png" to "image/png",
+        "gif" to "image/gif", "webp" to "image/webp", "avif" to "image/avif"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +66,11 @@ class MainActivity : ComponentActivity() {
                     val host = uri.host.orEmpty()
                     if (uri.scheme == "https" && request.method.equals("GET", true) &&
                         (host == "gelbooru.com" || host.endsWith(".gelbooru.com"))) {
+                        // Plain image files: stream without blocking. Range requests (video) and
+                        // API/JSON calls keep the blocking path below because they need exact headers.
+                        if (request.requestHeaders["Range"] == null) {
+                            streamImageAsync(uri)?.let { return it }
+                        }
                         fetchWithReferer(uri.toString(), request.requestHeaders)?.let { return it }
                     }
                     return super.shouldInterceptRequest(view, request)
@@ -94,6 +109,45 @@ class MainActivity : ComponentActivity() {
                 headers["Cache-Control"] = "no-store"
                 WebResourceResponse(mime?.takeIf { it.isNotBlank() } ?: "application/octet-stream", null, 200, "OK", headers, android.os.ParcelFileDescriptor.AutoCloseInputStream(descriptor))
             }
+        } catch (_: Exception) { null }
+    }
+
+    /**
+     * Returns immediately with a pipe, and fills it from a pool thread. The mime type comes from the
+     * file extension because the real response headers are not known yet. If the download fails the pipe
+     * is closed empty, the <img> fires onerror, and the JS falls back to the next URL.
+     */
+    private fun streamImageAsync(uri: Uri): WebResourceResponse? {
+        val ext = uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase().orEmpty()
+        val mime = imageMimeByExt[ext] ?: return null
+        return try {
+            val pipe = ParcelFileDescriptor.createPipe()
+            val input = ParcelFileDescriptor.AutoCloseInputStream(pipe[0])
+            val output = ParcelFileDescriptor.AutoCloseOutputStream(pipe[1])
+            val url = uri.toString()
+            imagePool.execute {
+                var conn: HttpURLConnection? = null
+                try {
+                    val c = URL(url).openConnection() as HttpURLConnection
+                    conn = c
+                    c.connectTimeout = 10000
+                    c.readTimeout = 15000
+                    c.setRequestProperty("Referer", referer)
+                    c.setRequestProperty("User-Agent", userAgent)
+                    c.setRequestProperty("Accept", "image/*,*/*;q=0.8")
+                    if (c.responseCode == 200) {
+                        c.inputStream.use { it.copyTo(output) }
+                    }
+                } catch (_: Exception) {
+                    // network error or the WebView cancelled the request: just close the pipe
+                } finally {
+                    try { output.close() } catch (_: Exception) {}
+                    conn?.disconnect()
+                }
+            }
+            val headers = HashMap<String, String>()
+            headers["Access-Control-Allow-Origin"] = "*"
+            WebResourceResponse(mime, null, 200, "OK", headers, input)
         } catch (_: Exception) { null }
     }
 
@@ -195,6 +249,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        imagePool.shutdownNow()
         if (::webView.isInitialized) webView.destroy()
         super.onDestroy()
     }
