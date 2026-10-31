@@ -296,7 +296,7 @@
 .tag-chip.cat-5, .tag-chip.cat-metadata {
   color: var(--tag-metadata);
   background-color: var(--tag-metadata-bg);
-  border-color: rgba(251, 191, 36, 0.25);
+  border-color: rgba(251, 146, 60, 0.3);
 }
 
 .tag-chip.negated {

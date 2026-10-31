@@ -234,8 +234,12 @@ export const autocompleteTags = async (term) => {
 export const fetchTagCategories = async (tagNamesArray) => {
   if (!tagNamesArray || tagNamesArray.length === 0) return {};
 
-  const missing = [];
+  const decode = (s) => s
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#0*39;/g, "'");
+
   const result = {};
+  const missing = [];
 
   for (const name of tagNamesArray) {
     const cached = memoryCache.get(`tag_cat_${name}`);
@@ -248,31 +252,42 @@ export const fetchTagCategories = async (tagNamesArray) => {
 
   if (missing.length === 0) return result;
 
-  // Batch query up to 50 tags
-  const chunk = missing.slice(0, 50).join(' ');
-  const endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=tag&q=index&json=1&names=${encodeURIComponent(chunk)}`;
+  // Query ALL uncached tags in batches (the old code only sent the first 50).
+  // Batches run one after another so the request throttle in httpGet is respected.
+  const BATCH_SIZE = 40;
+  const found = {};
 
-  try {
-    const data = await httpGet(endpoint);
-    let tagList = [];
-    if (Array.isArray(data?.tag)) {
-      tagList = data.tag;
-    } else if (data?.tag && typeof data.tag === 'object') {
-      tagList = [data.tag];
-    }
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    const chunk = missing.slice(i, i + BATCH_SIZE).join(' ');
+    const endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=tag&q=index&json=1&names=${encodeURIComponent(chunk)}`;
 
-    for (const t of tagList) {
-      const cat = getTagCategoryName(t.type);
-      result[t.name] = cat;
-      memoryCache.set(`tag_cat_${t.name}`, cat);
+    try {
+      const data = await httpGet(endpoint);
+      let tagList = [];
+      if (Array.isArray(data?.tag)) {
+        tagList = data.tag;
+      } else if (data?.tag && typeof data.tag === 'object') {
+        tagList = [data.tag];
+      }
+
+      for (const t of tagList) {
+        const cat = getTagCategoryName(parseInt(t.type, 10));
+        found[t.name] = cat;
+        found[decode(t.name)] = cat;
+      }
+    } catch (err) {
+      // A failed batch only leaves its own tags as "general"; the other batches still count.
+      console.warn('Tag info query failed:', err);
     }
-  } catch (err) {
-    console.warn('Tag info query failed:', err);
   }
 
-  // For any tags still not returned, default to general
   for (const name of missing) {
-    if (!result[name]) {
+    const cat = found[name] || found[decode(name)];
+    if (cat) {
+      result[name] = cat;
+      memoryCache.set(`tag_cat_${name}`, cat);
+    } else {
+      // Not cached on purpose, so a failed batch is retried next time the sheet opens
       result[name] = 'general';
     }
   }

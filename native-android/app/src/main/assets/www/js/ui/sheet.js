@@ -85,8 +85,8 @@ export class BottomSheetController {
     // Group tags into categorized buckets
     const groups = {
       artist: [],
-      character: [],
       copyright: [],
+      character: [],
       general: [],
       metadata: []
     };
@@ -163,8 +163,8 @@ export class BottomSheetController {
       <!-- Categorized Tags -->
       <div style="display:flex; flex-direction:column; gap:16px; margin-top: 4px;">
         ${this.renderTagGroup(t('cat_artist'), groups.artist, 'artist')}
-        ${this.renderTagGroup(t('cat_character'), groups.character, 'character')}
         ${this.renderTagGroup(t('cat_copyright'), groups.copyright, 'copyright')}
+        ${this.renderTagGroup(t('cat_character'), groups.character, 'character')}
         ${this.renderTagGroup(t('cat_general'), groups.general, 'general')}
         ${this.renderTagGroup(t('cat_metadata'), groups.metadata, 'metadata')}
       </div>
@@ -177,10 +177,10 @@ export class BottomSheetController {
   renderTagGroup(title, tags, categoryClass) {
     if (!tags || tags.length === 0) return '';
     return `
-      <div class="tag-category-section">
-        <div class="tag-category-header">
-          <span>${title}</span>
-          <span style="opacity:0.6; font-size:0.72rem;">(${tags.length})</span>
+      <div class="tag-category-section cat-section-${categoryClass}">
+        <div class="tag-category-header cat-${categoryClass}">
+          <span class="tag-category-title">${title}</span>
+          <span class="tag-category-count">${tags.length}</span>
         </div>
         <div class="tag-chips-wrap">
           ${tags.map(tag => `

@@ -123,14 +123,41 @@
 }
 
 .tag-category-header {
+  --cat-color: var(--text-secondary);
+  --cat-bg: var(--bg-surface-elevated);
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--cat-color);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background-color: var(--cat-bg);
+  color: var(--cat-color);
 }
+
+.tag-category-count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0;
+  color: var(--cat-color);
+  background-color: var(--cat-bg);
+  border: 1px solid var(--cat-color);
+}
+
+.tag-category-header.cat-artist    { --cat-color: var(--tag-artist);    --cat-bg: var(--tag-artist-bg); }
+.tag-category-header.cat-copyright { --cat-color: var(--tag-copyright); --cat-bg: var(--tag-copyright-bg); }
+.tag-category-header.cat-character { --cat-color: var(--tag-character); --cat-bg: var(--tag-character-bg); }
+.tag-category-header.cat-general   { --cat-color: var(--tag-general);   --cat-bg: var(--tag-general-bg); }
+.tag-category-header.cat-metadata  { --cat-color: var(--tag-metadata);  --cat-bg: var(--tag-metadata-bg); }
 
 .tag-chips-wrap {
   display: flex;

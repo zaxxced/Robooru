@@ -27,8 +27,8 @@
   --tag-copyright-bg: rgba(192, 132, 252, 0.12);
   --tag-character: #34d399;
   --tag-character-bg: rgba(52, 211, 153, 0.12);
-  --tag-metadata: #fbbf24;
-  --tag-metadata-bg: rgba(251, 191, 36, 0.12);
+  --tag-metadata: #fb923c;
+  --tag-metadata-bg: rgba(251, 146, 60, 0.14);
 
   /* Rating Badges */
   --rating-general: #10b981;
@@ -86,6 +86,13 @@
   --text-muted: #94a3b8;
 
   --accent-glow: rgba(99, 102, 241, 0.15);
+
+  /* Darker tag colors so they stay readable on white */
+  --tag-general: #0284c7;
+  --tag-artist: #e11d48;
+  --tag-copyright: #9333ea;
+  --tag-character: #059669;
+  --tag-metadata: #ea580c;
 }
 
 /* Accent Color Variations */
