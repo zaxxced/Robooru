@@ -13,7 +13,7 @@ export const translations = {
     nav_settings: 'Settings',
 
     // Header & Actions
-    app_title: 'BooruBrowser',
+    app_title: 'Yoibooru',
     search_placeholder: 'Search tags (e.g. 1girl landscape)...',
     load_original: 'Load Original',
     original_loaded: 'Original (HD)',
@@ -129,7 +129,7 @@ export const translations = {
     settings_cache_cleared: 'Cache cleared successfully',
 
     settings_language: 'Language',
-    settings_about: 'About BooruBrowser',
+    settings_about: 'About Yoibooru',
     about_desc: 'Lightweight unofficial Gelbooru client for Android and Web. Inspired by Mori with pure HTML/CSS/JS and Capacitor.',
     about_disclaimer: 'Unofficial client, not affiliated with Gelbooru.',
     version: 'Version 1.0.0',
@@ -160,7 +160,7 @@ export const translations = {
     nav_settings: 'Pengaturan',
 
     // Header & Actions
-    app_title: 'BooruBrowser',
+    app_title: 'Yoibooru',
     search_placeholder: 'Cari tag (misal: 1girl pemandangan)...',
     load_original: 'Muat Gambar Asli',
     original_loaded: 'Asli (HD)',
@@ -276,7 +276,7 @@ export const translations = {
     settings_cache_cleared: 'Cache berhasil dibersihkan',
 
     settings_language: 'Bahasa',
-    settings_about: 'Tentang BooruBrowser',
+    settings_about: 'Tentang Yoibooru',
     about_desc: 'Klien Gelbooru ringan dan lancar untuk Android dan Web. Terinspirasi dari Mori menggunakan HTML/CSS/JS murni dan Capacitor.',
     about_disclaimer: 'Klien tidak resmi, tidak berafiliasi dengan Gelbooru.',
     version: 'Versi 1.0.0',
