@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+    - main
       - feat/kotlin-native-ui
     paths:
       - "native-android/**"
