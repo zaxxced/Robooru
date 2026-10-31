@@ -117,7 +117,8 @@ export class DownloadsController {
     section.style.display = entries.length ? 'block' : 'none';
 
     // Progress updates call this often: rebuild only when the set of posts changes, so previews don't flicker
-    const key = entries.map(e => e.post.id).join(',');
+    // The key also records whether a local file exists, so the card is rebuilt once when a download finishes.
+    const key = entries.map(e => `${e.post.id}:${e.localUrl ? 1 : 0}`).join(',');
     if (key === this.carouselKey && list.children.length === entries.length) return;
     this.carouselKey = key;
     list.innerHTML = '';
@@ -141,8 +142,9 @@ export class DownloadsController {
       card.append(img, label);
       list.appendChild(card);
 
-      // Sample first: the cards are large, so the small preview would look blurry
-      const candidates = [item.post.sample_url, item.post.preview_url, item.thumb].filter(Boolean);
+      // The downloaded file on the device comes first, so the card works offline.
+      // Online sample is next (cards are large, the small preview would look blurry), then the preview.
+      const candidates = [item.localUrl, item.post.sample_url, item.post.preview_url, item.thumb].filter(Boolean);
       setImageSrc(img, [...new Set(candidates)], {
         onLoad: () => {
           card.classList.remove('skeleton');
@@ -155,7 +157,8 @@ export class DownloadsController {
       });
 
       card.addEventListener('click', () => {
-        const posts = entries.map(e => e.post);
+        // The viewer prefers post.local_file_url, so hand it the local copy for every downloaded post
+        const posts = entries.map(e => ({ ...e.post, local_file_url: e.localUrl || '' }));
         window.app?.viewer?.open(posts, idx);
       });
     });
