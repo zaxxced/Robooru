@@ -231,8 +231,9 @@ export const autocompleteTags = async (term) => {
 /**
  * Fetch Tag Metadata (Categories for full details sheet)
  */
-export const fetchTagCategories = async (tagNamesArray) => {
+export const fetchTagCategories = async (tagNamesArray, opts = {}) => {
   if (!tagNamesArray || tagNamesArray.length === 0) return {};
+  const { apiKey = '', userId = '', onProgress = null } = opts;
 
   const decode = (s) => s
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
@@ -252,14 +253,23 @@ export const fetchTagCategories = async (tagNamesArray) => {
 
   if (missing.length === 0) return result;
 
-  // Query ALL uncached tags in batches (the old code only sent the first 50).
-  // Batches run one after another so the request throttle in httpGet is respected.
+  const remember = (name, cat) => {
+    result[name] = cat;
+    memoryCache.set(`tag_cat_${name}`, cat);
+  };
+
+  // Step 1: Gelbooru tag API, in batches. Gelbooru now requires api_key + user_id on dapi
+  // requests, which the old code did not send for tags, so every tag silently fell back to "general".
   const BATCH_SIZE = 40;
   const found = {};
+  let batchFailed = false;
 
   for (let i = 0; i < missing.length; i += BATCH_SIZE) {
     const chunk = missing.slice(i, i + BATCH_SIZE).join(' ');
-    const endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=tag&q=index&json=1&names=${encodeURIComponent(chunk)}`;
+    let endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=tag&q=index&json=1&names=${encodeURIComponent(chunk)}`;
+    if (apiKey && userId) {
+      endpoint += `&api_key=${encodeURIComponent(apiKey)}&user_id=${encodeURIComponent(userId)}`;
+    }
 
     try {
       const data = await httpGet(endpoint);
@@ -269,28 +279,50 @@ export const fetchTagCategories = async (tagNamesArray) => {
       } else if (data?.tag && typeof data.tag === 'object') {
         tagList = [data.tag];
       }
-
       for (const t of tagList) {
         const cat = getTagCategoryName(parseInt(t.type, 10));
         found[t.name] = cat;
         found[decode(t.name)] = cat;
       }
     } catch (err) {
-      // A failed batch only leaves its own tags as "general"; the other batches still count.
+      batchFailed = true;
       console.warn('Tag info query failed:', err);
     }
   }
 
+  const leftovers = [];
   for (const name of missing) {
     const cat = found[name] || found[decode(name)];
-    if (cat) {
-      result[name] = cat;
-      memoryCache.set(`tag_cat_${name}`, cat);
-    } else {
-      // Not cached on purpose, so a failed batch is retried next time the sheet opens
-      result[name] = 'general';
-    }
+    if (cat) remember(name, cat);
+    else leftovers.push(name);
   }
+
+  if (leftovers.length === 0) return result;
+
+  // Until step 2 finishes, leftovers show as "general"
+  for (const name of leftovers) result[name] = 'general';
+  if (onProgress) onProgress({ ...result });
+
+  // Step 2 (fallback): the autocomplete endpoint returns each tag's category and needs no
+  // credentials. Ask for each leftover tag by name and keep the exact match.
+  const queue = [...leftovers];
+  const worker = async () => {
+    while (queue.length > 0) {
+      const name = queue.shift();
+      const term = decode(name);
+      try {
+        const items = await autocompleteTags(term);
+        const hit = items.find(it => it.value === term || it.value === name);
+        if (hit) {
+          remember(name, hit.category);
+          if (onProgress) onProgress({ ...result });
+        }
+      } catch {
+        // leave as general; it is retried the next time the sheet opens
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
 
   return result;
 };

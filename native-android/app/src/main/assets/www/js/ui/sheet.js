@@ -59,9 +59,15 @@ export class BottomSheetController {
     BackButton.push('bottom-sheet', () => this.close());
     this.renderLoading();
 
-    // Fetch tag category classification
-    const tagCategories = await fetchTagCategories(post.tagsArray);
-    this.renderDetails(post, tagCategories);
+    // Fetch tag category classification. onProgress re-renders as the fallback lookup fills in
+    // categories, but only while this same post's sheet is still open.
+    const stillCurrent = () => this.isOpen && this.currentPost === post;
+    const tagCategories = await fetchTagCategories(post.tagsArray, {
+      apiKey: this.app.settings?.api_key || '',
+      userId: this.app.settings?.user_id || '',
+      onProgress: (partial) => { if (stillCurrent()) this.renderDetails(post, partial); }
+    });
+    if (stillCurrent()) this.renderDetails(post, tagCategories);
   }
 
   close() {
