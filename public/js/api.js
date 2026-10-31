@@ -111,7 +111,7 @@ export const fetchPosts = async ({
   limit = 40,
   apiKey = '',
   userId = '',
-  ratingFilter = 'all', // 'all' | 'general' | 'sensitive' | 'questionable' | 'explicit'
+  ratingFilter = 'all', // setting value: 'safe' | 'standard' | 'all' (raw rating names also accepted)
   blacklist = []
 }) => {
   // Normalize tag input
@@ -120,7 +120,20 @@ export const fetchPosts = async ({
   // Jika user tidak mengetik rating sendiri di pencarian, pakai pengaturan
   const hasRatingTag = /\brating:\w+\b/i.test(finalTags);
   if (!hasRatingTag && ratingFilter && ratingFilter !== 'all') {
-    finalTags = finalTags ? `${finalTags} rating:${ratingFilter}` : `rating:${ratingFilter}`;
+    // The settings dropdown stores 'safe' / 'standard' / 'all', which are NOT Gelbooru ratings.
+    // Sending rating:standard or rating:safe returns zero results, so map them to real tags.
+    const RATING_TAGS = {
+      safe: 'rating:general',
+      standard: '-rating:questionable -rating:explicit', // leaves general + sensitive
+      general: 'rating:general',
+      sensitive: 'rating:sensitive',
+      questionable: 'rating:questionable',
+      explicit: 'rating:explicit'
+    };
+    const ratingTags = RATING_TAGS[ratingFilter];
+    if (ratingTags) {
+      finalTags = finalTags ? `${finalTags} ${ratingTags}` : ratingTags;
+    }
   }
 
   let endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=post&q=index&json=1&pid=${page}&limit=${limit}`;
