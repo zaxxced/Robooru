@@ -111,19 +111,29 @@ export const fetchPosts = async ({
   limit = 40,
   apiKey = '',
   userId = '',
-  ratingFilter = 'standard',
+  ratingFilter = 'all', // setting value: 'safe' | 'standard' | 'all' (raw rating names also accepted)
   blacklist = []
 }) => {
-  // Construct search query
-  let finalTags = tags.trim();
+  // Normalize tag input
+  let finalTags = tags.trim().replace(/\s+/g, ' ').trim();
 
-  // If rating filter is enforced
-  if (ratingFilter === 'safe' && !finalTags.includes('rating:')) {
-    finalTags = finalTags ? `${finalTags} rating:general` : 'rating:general';
-  } else if (ratingFilter === 'standard' && !finalTags.includes('rating:')) {
-    // In Gelbooru, multiple ratings can be separated or general+sensitive
-    // Gelbooru allows rating:general or rating:sensitive
-    // We let both through in standard filter, and filter questionable/explicit client-side if needed
+  // Jika user tidak mengetik rating sendiri di pencarian, pakai pengaturan
+  const hasRatingTag = /\brating:\w+\b/i.test(finalTags);
+  if (!hasRatingTag && ratingFilter && ratingFilter !== 'all') {
+    // The settings dropdown stores 'safe' / 'standard' / 'all', which are NOT Gelbooru ratings.
+    // Sending rating:standard or rating:safe returns zero results, so map them to real tags.
+    const RATING_TAGS = {
+      safe: 'rating:general',
+      standard: '-rating:questionable -rating:explicit', // leaves general + sensitive
+      general: 'rating:general',
+      sensitive: 'rating:sensitive',
+      questionable: 'rating:questionable',
+      explicit: 'rating:explicit'
+    };
+    const ratingTags = RATING_TAGS[ratingFilter];
+    if (ratingTags) {
+      finalTags = finalTags ? `${finalTags} ${ratingTags}` : ratingTags;
+    }
   }
 
   let endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=post&q=index&json=1&pid=${page}&limit=${limit}`;
@@ -135,13 +145,13 @@ export const fetchPosts = async ({
   }
 
   // Check memory cache
-  const cacheKey = `posts_${finalTags}_${page}_${limit}`;
+  const cacheKey = `posts_${finalTags}_${page}_${limit}_${apiKey ? 'auth' : 'anon'}`;
   if (memoryCache.has(cacheKey)) {
     return memoryCache.get(cacheKey);
   }
 
   const data = await httpGet(endpoint);
-  
+
   // Gelbooru returns { "@attributes": { count, limit, offset }, "post": [...] }
   let rawPosts = [];
   let totalCount = 0;
@@ -159,13 +169,6 @@ export const fetchPosts = async ({
 
   // Normalize post format
   let posts = rawPosts.map(p => normalizePost(p));
-
-  // Apply Rating Filter
-  if (ratingFilter === 'safe') {
-    posts = posts.filter(p => p.rating === 'general' || p.rating === 'g');
-  } else if (ratingFilter === 'standard') {
-    posts = posts.filter(p => p.rating === 'general' || p.rating === 'g' || p.rating === 'sensitive' || p.rating === 's');
-  }
 
   // Apply Blacklist
   let hiddenByBlacklist = 0;
@@ -241,11 +244,16 @@ export const autocompleteTags = async (term) => {
 /**
  * Fetch Tag Metadata (Categories for full details sheet)
  */
-export const fetchTagCategories = async (tagNamesArray) => {
+export const fetchTagCategories = async (tagNamesArray, opts = {}) => {
   if (!tagNamesArray || tagNamesArray.length === 0) return {};
+  const { apiKey = '', userId = '', onProgress = null } = opts;
 
-  const missing = [];
+  const decode = (s) => s
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#0*39;/g, "'");
+
   const result = {};
+  const missing = [];
 
   for (const name of tagNamesArray) {
     const cached = memoryCache.get(`tag_cat_${name}`);
@@ -258,34 +266,76 @@ export const fetchTagCategories = async (tagNamesArray) => {
 
   if (missing.length === 0) return result;
 
-  // Batch query up to 50 tags
-  const chunk = missing.slice(0, 50).join(' ');
-  const endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=tag&q=index&json=1&names=${encodeURIComponent(chunk)}`;
+  const remember = (name, cat) => {
+    result[name] = cat;
+    memoryCache.set(`tag_cat_${name}`, cat);
+  };
 
-  try {
-    const data = await httpGet(endpoint);
-    let tagList = [];
-    if (Array.isArray(data?.tag)) {
-      tagList = data.tag;
-    } else if (data?.tag && typeof data.tag === 'object') {
-      tagList = [data.tag];
+  // Step 1: Gelbooru tag API, in batches. Gelbooru now requires api_key + user_id on dapi
+  // requests, which the old code did not send for tags, so every tag silently fell back to "general".
+  const BATCH_SIZE = 40;
+  const found = {};
+  let batchFailed = false;
+
+  for (let i = 0; i < missing.length; i += BATCH_SIZE) {
+    const chunk = missing.slice(i, i + BATCH_SIZE).join(' ');
+    let endpoint = `${GELBOORU_BASE}/index.php?page=dapi&s=tag&q=index&json=1&names=${encodeURIComponent(chunk)}`;
+    if (apiKey && userId) {
+      endpoint += `&api_key=${encodeURIComponent(apiKey)}&user_id=${encodeURIComponent(userId)}`;
     }
 
-    for (const t of tagList) {
-      const cat = getTagCategoryName(t.type);
-      result[t.name] = cat;
-      memoryCache.set(`tag_cat_${t.name}`, cat);
+    try {
+      const data = await httpGet(endpoint);
+      let tagList = [];
+      if (Array.isArray(data?.tag)) {
+        tagList = data.tag;
+      } else if (data?.tag && typeof data.tag === 'object') {
+        tagList = [data.tag];
+      }
+      for (const t of tagList) {
+        const cat = getTagCategoryName(parseInt(t.type, 10));
+        found[t.name] = cat;
+        found[decode(t.name)] = cat;
+      }
+    } catch (err) {
+      batchFailed = true;
+      console.warn('Tag info query failed:', err);
     }
-  } catch (err) {
-    console.warn('Tag info query failed:', err);
   }
 
-  // For any tags still not returned, default to general
+  const leftovers = [];
   for (const name of missing) {
-    if (!result[name]) {
-      result[name] = 'general';
-    }
+    const cat = found[name] || found[decode(name)];
+    if (cat) remember(name, cat);
+    else leftovers.push(name);
   }
+
+  if (leftovers.length === 0) return result;
+
+  // Until step 2 finishes, leftovers show as "general"
+  for (const name of leftovers) result[name] = 'general';
+  if (onProgress) onProgress({ ...result });
+
+  // Step 2 (fallback): the autocomplete endpoint returns each tag's category and needs no
+  // credentials. Ask for each leftover tag by name and keep the exact match.
+  const queue = [...leftovers];
+  const worker = async () => {
+    while (queue.length > 0) {
+      const name = queue.shift();
+      const term = decode(name);
+      try {
+        const items = await autocompleteTags(term);
+        const hit = items.find(it => it.value === term || it.value === name);
+        if (hit) {
+          remember(name, hit.category);
+          if (onProgress) onProgress({ ...result });
+        }
+      } catch {
+        // leave as general; it is retried the next time the sheet opens
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
 
   return result;
 };

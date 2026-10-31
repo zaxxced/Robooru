@@ -59,9 +59,15 @@ export class BottomSheetController {
     BackButton.push('bottom-sheet', () => this.close());
     this.renderLoading();
 
-    // Fetch tag category classification
-    const tagCategories = await fetchTagCategories(post.tagsArray);
-    this.renderDetails(post, tagCategories);
+    // Fetch tag category classification. onProgress re-renders as the fallback lookup fills in
+    // categories, but only while this same post's sheet is still open.
+    const stillCurrent = () => this.isOpen && this.currentPost === post;
+    const tagCategories = await fetchTagCategories(post.tagsArray, {
+      apiKey: this.app.settings?.api_key || '',
+      userId: this.app.settings?.user_id || '',
+      onProgress: (partial) => { if (stillCurrent()) this.renderDetails(post, partial); }
+    });
+    if (stillCurrent()) this.renderDetails(post, tagCategories);
   }
 
   close() {
@@ -85,8 +91,8 @@ export class BottomSheetController {
     // Group tags into categorized buckets
     const groups = {
       artist: [],
-      character: [],
       copyright: [],
+      character: [],
       general: [],
       metadata: []
     };
@@ -163,8 +169,8 @@ export class BottomSheetController {
       <!-- Categorized Tags -->
       <div style="display:flex; flex-direction:column; gap:16px; margin-top: 4px;">
         ${this.renderTagGroup(t('cat_artist'), groups.artist, 'artist')}
-        ${this.renderTagGroup(t('cat_character'), groups.character, 'character')}
         ${this.renderTagGroup(t('cat_copyright'), groups.copyright, 'copyright')}
+        ${this.renderTagGroup(t('cat_character'), groups.character, 'character')}
         ${this.renderTagGroup(t('cat_general'), groups.general, 'general')}
         ${this.renderTagGroup(t('cat_metadata'), groups.metadata, 'metadata')}
       </div>
@@ -177,10 +183,10 @@ export class BottomSheetController {
   renderTagGroup(title, tags, categoryClass) {
     if (!tags || tags.length === 0) return '';
     return `
-      <div class="tag-category-section">
-        <div class="tag-category-header">
-          <span>${title}</span>
-          <span style="opacity:0.6; font-size:0.72rem;">(${tags.length})</span>
+      <div class="tag-category-section cat-section-${categoryClass}">
+        <div class="tag-category-header cat-${categoryClass}">
+          <span class="tag-category-title">${title}</span>
+          <span class="tag-category-count">${tags.length}</span>
         </div>
         <div class="tag-chips-wrap">
           ${tags.map(tag => `
